@@ -69,4 +69,12 @@ if (typeof window !== 'undefined') {
   });
 }
 
+/**
+ * Returns whether an H3 cell has been uncovered.
+ */
+export function isRevealed(h3: string): boolean {
+  return useFog.getState().revealed.has(h3);
+}
+
 export default useFog;
+

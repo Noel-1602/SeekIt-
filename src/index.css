@@ -85,3 +85,69 @@ body,
   }
 }
 
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Markdown typography in capsule viewer */
+.capsule-markdown-content p {
+  margin-bottom: 0.75em;
+}
+
+.capsule-markdown-content p:last-child {
+  margin-bottom: 0;
+}
+
+.capsule-markdown-content h1,
+.capsule-markdown-content h2,
+.capsule-markdown-content h3 {
+  color: var(--amber);
+  margin-top: 0.8em;
+  margin-bottom: 0.4em;
+  font-weight: 700;
+}
+
+.capsule-markdown-content ul,
+.capsule-markdown-content ol {
+  padding-left: 1.25em;
+  margin-bottom: 0.75em;
+}
+
+.capsule-markdown-content li {
+  margin-bottom: 0.25em;
+}
+
+.capsule-markdown-content blockquote {
+  border-left: 3px solid var(--amber);
+  padding-left: 12px;
+  color: var(--muted);
+  font-style: italic;
+  margin: 0.75em 0;
+}
+
+.capsule-markdown-content code {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+

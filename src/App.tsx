@@ -2,8 +2,12 @@ import { useEffect } from 'react';
 import { MapView } from './map/MapView';
 import { UserDot } from './map/UserDot';
 import { SimControls } from './map/SimControls';
+import { PinsLayer } from './features/capsules/PinsLayer';
+import { Composer } from './features/capsules/Composer';
+import { Viewer } from './features/capsules/Viewer';
 import { useFog } from './store/fog';
 import { useGps } from './location/gps';
+import { useCapsules } from './store/capsules';
 import { setMode } from './location/mode';
 import { locateMe } from './map/mapActions';
 import { CELL_AREA_KM2 } from './config';
@@ -16,6 +20,7 @@ import {
   Navigation,
   AlertCircle,
   ArrowRight,
+  Sparkles,
 } from 'lucide-react';
 
 /**
@@ -257,6 +262,51 @@ function HudPanel() {
 }
 
 /**
+ * Floating button to open the Capsule Composer.
+ */
+function AddCapsuleButton() {
+  const setComposerOpen = useCapsules((state) => state.setComposerOpen);
+  const source = useFog((state) => state.source);
+
+  return (
+    <button
+      onClick={() => setComposerOpen(true)}
+      title="Create memory capsule at current spot"
+      style={{
+        position: 'absolute',
+        bottom: source === 'sim' ? '88px' : '24px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 15,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '10px 20px',
+        borderRadius: '24px',
+        backgroundColor: 'var(--amber)',
+        color: 'var(--void)',
+        border: 'none',
+        fontSize: '13px',
+        fontWeight: 800,
+        letterSpacing: '-0.01em',
+        cursor: 'pointer',
+        boxShadow: '0 4px 20px rgba(245, 185, 66, 0.5), 0 2px 6px rgba(0, 0, 0, 0.4)',
+        transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'translateX(-50%) scale(1.05)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'translateX(-50%) scale(1)';
+      }}
+    >
+      <Sparkles size={16} />
+      <span>+ Capsule</span>
+    </button>
+  );
+}
+
+/**
  * Floating Locate Me button positioned at the bottom right.
  */
 function LocateMeButton() {
@@ -307,11 +357,17 @@ export default function App() {
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
       <MapView>
+        <PinsLayer />
         <UserDot />
         <SimControls />
         <HudPanel />
+        <AddCapsuleButton />
         <LocateMeButton />
       </MapView>
+
+      <Composer />
+      <Viewer />
     </div>
   );
 }
+

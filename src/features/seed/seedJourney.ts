@@ -84,7 +84,7 @@ function createDemoPhotoBlob(): Promise<{ blob: Blob; mime: string }> {
 }
 
 /**
- * Seeds a realistic curved demo journey of ~250 revealed H3 cells and 3 sample capsules.
+ * Seeds a realistic curved demo journey of revealed H3 cells and 3 sample capsules.
  */
 export async function seedDemoJourney(
   center: LatLng

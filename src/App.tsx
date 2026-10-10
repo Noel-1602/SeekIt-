@@ -98,7 +98,7 @@ function HudPanel() {
           </div>
           <div>
             <div style={{ fontSize: '15px', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text)' }}>
-              UNFOG
+              SEEKIT
             </div>
             <div style={{ fontSize: '11px', color: 'var(--muted)' }}>
               Cartographic Memory Explorer

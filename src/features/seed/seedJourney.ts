@@ -71,7 +71,7 @@ function createDemoPhotoBlob(): Promise<{ blob: Blob; mime: string }> {
 
     ctx.font = '14px system-ui, sans-serif';
     ctx.fillStyle = 'rgba(45, 212, 191, 0.9)';
-    ctx.fillText('UNFOG EXPEDITION ARCHIVE', 40, 574);
+    ctx.fillText('SEEKIT EXPEDITION ARCHIVE', 40, 574);
 
     canvas.toBlob(
       (blob) => {

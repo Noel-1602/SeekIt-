@@ -1,6 +1,6 @@
-# Unfog
+# SeekIt
 
-Unfog — Inverse fog-of-war travel journal on an interactive map.
+SeekIt — Inverse fog-of-war travel journal on an interactive map.
 
 **Tech Stack**: React, Vite, TypeScript, MapLibre GL JS, OpenFreeMap, H3-js, Dexie.
 

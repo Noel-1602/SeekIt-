@@ -1,6 +1,6 @@
-# Unfog: Product Requirements Document
+# SeekIt: Product Requirements Document
 
-> "Unfog" is a placeholder name. Rename it freely; nothing in the code depends on it.
+> SeekIt is an inverse fog-of-war cartographic memory explorer.
 
 **Type:** Website (mobile-first, works on laptop) | **Team:** 2 people | **Build time:** 5 hours | **Cost:** everything free, no API keys, no credit card
 
@@ -217,7 +217,7 @@ export class FogDB extends Dexie {
   capsules!: Table<Capsule, string>;
   privacy!: Table<PrivacyZone, string>;
   constructor() {
-    super('unfog');
+    super('seekit');
     this.version(1).stores({
       cells: 'h3, ts',
       capsules: 'id, h3, createdAt',
@@ -307,7 +307,7 @@ click-to-walk) ─────┘      2. if source = 'gps': drop if implied spe
 | Line endings | A adds `.gitattributes` with `* text=auto eol=lf`. B runs `git config --global core.autocrlf input`. |
 | npm scripts | Must be cross-platform. No `rm -rf`, no `VAR=x cmd` prefixes, no bash-only syntax. Tell Antigravity this. |
 | Filename case | macOS and Windows both ignore case locally, but Vercel builds on Linux and does not. Every import must match the file's exact casing. |
-| Repo location | B keeps the repo outside OneDrive (for example `C:\dev\unfog`) to avoid sync trouble with `node_modules`. |
+| Repo location | B keeps the repo outside OneDrive (for example `C:\dev\seekit`) to avoid sync trouble with `node_modules`. |
 | Phone testing | Geolocation and microphone need HTTPS. Use the Vercel branch preview URL, or `cloudflared tunnel --url http://localhost:5173` (free). For a tunnel, set `server: { host: true, allowedHosts: ['.trycloudflare.com'] }` in `vite.config.ts`. |
 | Browsers | A tests Chrome and Safari (iPhone Safari records voice as mp4/aac). B tests Chrome and Edge (and Android Chrome if available, which records webm/opus). |
 | Laptop GPS | Laptop location is Wi-Fi based and rough (100 m or worse). Use the simulator on laptops, real GPS only on a phone. |
@@ -347,7 +347,7 @@ Sync points (both stop, merge to `main`, and verify): **1:40**, **2:50** (integr
 
 ## 10. Demo script (3 minutes) and pitch
 
-1. **Hook (15 s):** "Every map shows you everything. Unfog shows you nothing, until you go there."
+1. **Hook (15 s):** "Every map shows you everything. SeekIt shows you nothing, until you go there."
 2. **Fog (20 s):** dark map. Press Demo walk.
 3. **Reveal (30 s):** walk with the arrow keys; the fog lifts along the path. Mention that on a phone this runs on real GPS.
 4. **Capsule (40 s):** drop a voice note, a photo and a text capsule. Open one in the viewer.
@@ -393,7 +393,7 @@ Sync points (both stop, merge to `main`, and verify): **1:40**, **2:50** (integr
 
 ```
 Read PRD.md fully, then my build guide (Person_A_Build_Guide.pdf or
-Person_B_Build_Guide.pdf). We are building "Unfog" in React + Vite + TypeScript with
+Person_B_Build_Guide.pdf). We are building "SeekIt" in React + Vite + TypeScript with
 MapLibre GL JS, h3-js, Dexie and Zustand. Follow the folder structure and file
 ownership in PRD section 6.2: only create or edit files that I own. Do not change
 shared files (types.ts, config.ts, db.ts) without telling me first. Keep npm scripts

@@ -7,7 +7,7 @@ export class FogDB extends Dexie {
   privacy!: Table<PrivacyZone, string>;
 
   constructor() {
-    super('unfog');
+    super('seekit');
     this.version(1).stores({
       cells: 'h3, ts',
       capsules: 'id, h3, createdAt',

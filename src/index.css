@@ -177,3 +177,80 @@ body.in-map-app #root {
   font-size: 0.9em;
 }
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Capsule Pin Marker Root Element (passed to MapLibre GL) */
+.capsule-pin-marker {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+  /* CRITICAL: Outer element MUST NOT have transform, transition on transform,
+     or hover transform rules, as MapLibre positions it via inline translate(X, Y) */
+}
+
+/* Inner badge wrapper handles visual styling, hover scale, and pressing pulse */
+.capsule-pin-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-color: #121923;
+  border: 2px solid #f5b942;
+  color: #f5b942;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 14px rgba(245, 185, 66, 0.45), 0 4px 10px rgba(0, 0, 0, 0.6);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  pointer-events: none;
+}
+
+/* Hover effect on inner badge */
+.capsule-pin-marker:hover .capsule-pin-inner {
+  transform: scale(1.18);
+  box-shadow: 0 0 20px rgba(245, 185, 66, 0.8), 0 6px 14px rgba(0, 0, 0, 0.7);
+}
+
+/* Active pressing state on inner badge */
+.capsule-pin-marker.is-pressing .capsule-pin-inner {
+  transform: scale(0.82) !important;
+  border-color: #ef4444 !important;
+  color: #ef4444 !important;
+  box-shadow: 0 0 22px rgba(239, 68, 68, 0.85), 0 2px 6px rgba(0, 0, 0, 0.8) !important;
+  animation: pin-press-pulse 0.4s ease-in-out infinite alternate !important;
+}
+
+@keyframes pin-press-pulse {
+  0% {
+    transform: scale(0.88);
+    box-shadow: 0 0 14px rgba(239, 68, 68, 0.6), 0 2px 6px rgba(0, 0, 0, 0.8);
+    border-color: #ef4444;
+  }
+  100% {
+    transform: scale(0.78);
+    box-shadow: 0 0 26px rgba(239, 68, 68, 0.95), 0 3px 8px rgba(0, 0, 0, 0.9);
+    border-color: #f87171;
+  }
+}
+

@@ -2,7 +2,7 @@ import type { LatLng } from './types';
 
 export const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
 export const H3_RES = 10; // hex edge ~65 m
-export const REVEAL_K = 1; // current cell + 1 ring of neighbors
+export const REVEAL_K = 0; // only active cell (tight reveal)
 export const MAX_ACCURACY_M = 50; // reject GPS fixes worse than this
 export const MAX_SPEED_KMH = 150; // reject teleport jumps (live GPS only)
 export const VOICE_MAX_S = 60;

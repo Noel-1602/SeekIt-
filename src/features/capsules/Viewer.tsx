@@ -13,11 +13,13 @@ import {
   Camera,
   Mic,
   Navigation,
+  Trash2,
 } from 'lucide-react';
 
 export function Viewer() {
   const selectedId = useCapsules((state) => state.selectedId);
   const setSelectedId = useCapsules((state) => state.setSelectedId);
+  const setDeleteTargetId = useCapsules((state) => state.setDeleteTargetId);
   const capsules = useCapsules((state) => state.capsules);
   const userPosition = useFog((state) => state.position);
 
@@ -406,9 +408,38 @@ export function Viewer() {
             padding: '12px 20px',
             borderTop: '1px solid var(--border)',
             display: 'flex',
-            justifyContent: 'flex-end',
+            alignItems: 'center',
+            justifyContent: 'space-between',
           }}
         >
+          <button
+            onClick={() => setDeleteTargetId(capsule.id)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              borderRadius: '10px',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              color: '#ef4444',
+              border: '1px solid rgba(239, 68, 68, 0.25)',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'background-color 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+            }}
+            title="Delete this memory"
+          >
+            <Trash2 size={13} />
+            <span>Delete</span>
+          </button>
+
           <button
             onClick={handleClose}
             style={{

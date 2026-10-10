@@ -53,30 +53,30 @@ export function PinsLayer() {
         continue;
       }
 
-      // Create new marker DOM element
+      // Outer marker DOM element passed to MapLibre (no transforms/transitions)
       const el = document.createElement('div');
       el.className = 'capsule-pin-marker';
       el.setAttribute('role', 'button');
       el.setAttribute('tabindex', '0');
       el.setAttribute('aria-label', `${capsule.type} capsule: ${capsule.title || 'Untitled'}`);
 
-      el.style.position = 'relative';
-      el.style.width = '32px';
-      el.style.height = '32px';
-      el.style.borderRadius = '50%';
-      el.style.backgroundColor = '#121923';
-      el.style.border = '2px solid #f5b942';
-      el.style.color = '#f5b942';
-      el.style.display = 'flex';
-      el.style.alignItems = 'center';
-      el.style.justifyContent = 'center';
-      el.style.cursor = 'pointer';
-      el.style.boxShadow = '0 0 14px rgba(245, 185, 66, 0.45), 0 4px 10px rgba(0, 0, 0, 0.6)';
-      el.style.transition = 'transform 0.15s ease, box-shadow 0.15s ease';
+      // Stop event bubbling on hover/pointer movements so MapLibre canvas/drag handlers do not misinterpret them
+      const stopPropagation = (e: Event) => {
+        e.stopPropagation();
+      };
+      el.addEventListener('mouseenter', stopPropagation);
+      el.addEventListener('mouseleave', stopPropagation);
+      el.addEventListener('mousemove', stopPropagation);
+      el.addEventListener('pointerenter', stopPropagation);
+      el.addEventListener('pointerleave', stopPropagation);
+
+      // Inner child wrapper for visual appearance, hover scale, and pressing pulse
+      const inner = document.createElement('div');
+      inner.className = 'capsule-pin-inner';
 
       // Type icon
       const iconMarkup = ICONS[capsule.type] || ICONS.text;
-      el.innerHTML = iconMarkup;
+      inner.innerHTML = iconMarkup;
 
       // Sealed lock badge if sealed
       if (capsule.sealed) {
@@ -94,22 +94,126 @@ export function PinsLayer() {
         lockBadge.style.justifyContent = 'center';
         lockBadge.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.5)';
         lockBadge.innerHTML = ICONS.lock;
-        el.appendChild(lockBadge);
+        inner.appendChild(lockBadge);
       }
 
-      // Hover feedback
-      el.addEventListener('mouseenter', () => {
-        el.style.transform = 'scale(1.18)';
-        el.style.boxShadow = '0 0 20px rgba(245, 185, 66, 0.8), 0 6px 14px rgba(0, 0, 0, 0.7)';
-      });
-      el.addEventListener('mouseleave', () => {
-        el.style.transform = 'scale(1)';
-        el.style.boxShadow = '0 0 14px rgba(245, 185, 66, 0.45), 0 4px 10px rgba(0, 0, 0, 0.6)';
+      el.appendChild(inner);
+
+      // Long-press gesture detection
+      let pressTimer: ReturnType<typeof setTimeout> | null = null;
+      let isLongPressTriggered = false;
+      let isPressing = false;
+      let startX = 0;
+      let startY = 0;
+
+      const handlePressStart = (e: PointerEvent | TouchEvent | MouseEvent) => {
+        // Prevent map click-to-walk or drag interference
+        e.stopPropagation();
+        if (isPressing) return;
+        isPressing = true;
+        isLongPressTriggered = false;
+
+        if ('clientX' in e) {
+          startX = e.clientX;
+          startY = e.clientY;
+        } else if ('touches' in e && e.touches.length > 0) {
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+        }
+
+        el.classList.add('is-pressing');
+
+        if (pressTimer) {
+          clearTimeout(pressTimer);
+        }
+
+        pressTimer = setTimeout(() => {
+          isLongPressTriggered = true;
+          pressTimer = null;
+          el.classList.remove('is-pressing');
+
+          // Subtle haptic feedback
+          try {
+            if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+              navigator.vibrate(50);
+            }
+          } catch {
+            // Ignore vibration errors on unsupported hardware
+          }
+
+          // Open deletion confirmation modal with targeted capsule ID
+          useCapsules.getState().setDeleteTargetId(capsule.id);
+        }, 600);
+      };
+
+      const handlePressEnd = (e?: Event) => {
+        if (e) {
+          e.stopPropagation();
+        }
+        if (pressTimer) {
+          clearTimeout(pressTimer);
+          pressTimer = null;
+        }
+        el.classList.remove('is-pressing');
+        // Delay resetting isPressing so trailing click event can inspect isLongPressTriggered
+        setTimeout(() => {
+          isPressing = false;
+        }, 120);
+      };
+
+      const handlePressMove = (e: PointerEvent | TouchEvent) => {
+        if (!isPressing) return;
+        let curX = startX;
+        let curY = startY;
+        if ('clientX' in e) {
+          curX = e.clientX;
+          curY = e.clientY;
+        } else if ('touches' in e && e.touches.length > 0) {
+          curX = e.touches[0].clientX;
+          curY = e.touches[0].clientY;
+        }
+        // If movement exceeds small threshold, user is panning rather than pressing
+        if (Math.hypot(curX - startX, curY - startY) > 10) {
+          handlePressEnd();
+        }
+      };
+
+      // Pointer event listeners (desktop mouse + modern touch)
+      el.addEventListener('pointerdown', handlePressStart);
+      el.addEventListener('pointerup', handlePressEnd);
+      el.addEventListener('pointerleave', handlePressEnd);
+      el.addEventListener('pointercancel', handlePressEnd);
+      el.addEventListener('pointermove', handlePressMove);
+
+      // Touch event listeners for comprehensive mobile touch coverage
+      el.addEventListener('touchstart', handlePressStart, { passive: false });
+      el.addEventListener('touchend', handlePressEnd);
+      el.addEventListener('touchcancel', handlePressEnd);
+      el.addEventListener('touchmove', handlePressMove, { passive: true });
+
+      // Prevent native context menu on long-press
+      el.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
       });
 
-      // Click to open viewer
+      // Accessible keyboard trigger
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.stopPropagation();
+          e.preventDefault();
+          setSelectedId(capsule.id);
+        }
+      });
+
+      // Click to open viewer (suppressed if long-press triggered)
       el.addEventListener('click', (e) => {
         e.stopPropagation(); // Prevent triggering click-to-walk on the map
+        if (isLongPressTriggered) {
+          e.preventDefault();
+          isLongPressTriggered = false;
+          return;
+        }
         setSelectedId(capsule.id);
       });
 

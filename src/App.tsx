@@ -5,6 +5,7 @@ import { SimControls } from './map/SimControls';
 import { PinsLayer } from './features/capsules/PinsLayer';
 import { Composer } from './features/capsules/Composer';
 import { Viewer } from './features/capsules/Viewer';
+import { DeleteMemoryModal } from './features/capsules/DeleteMemoryModal';
 import { ReplayBar } from './features/replay/ReplayBar';
 import { SettingsSheet } from './features/settings/SettingsSheet';
 import { useFog } from './store/fog';
@@ -203,6 +204,7 @@ export default function App() {
       <ReplayBar />
       <Composer />
       <Viewer />
+      <DeleteMemoryModal />
       <SettingsSheet isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );

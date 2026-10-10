@@ -8,10 +8,13 @@ export interface CapsulesState {
   capsules: Capsule[];
   composerOpen: boolean;
   selectedId: string | null;
+  deleteTargetId: string | null;
 
   setComposerOpen: (open: boolean) => void;
   setSelectedId: (id: string | null) => void;
+  setDeleteTargetId: (id: string | null) => void;
   addCapsule: (capsule: Capsule) => Promise<void>;
+  deleteCapsule: (id: string) => Promise<void>;
   hydrateCapsules: () => Promise<void>;
 }
 
@@ -41,10 +44,13 @@ export const useCapsules = create<CapsulesState>((set) => ({
   capsules: [],
   composerOpen: false,
   selectedId: null,
+  deleteTargetId: null,
 
   setComposerOpen: (open: boolean) => set({ composerOpen: open }),
 
   setSelectedId: (id: string | null) => set({ selectedId: id }),
+
+  setDeleteTargetId: (id: string | null) => set({ deleteTargetId: id }),
 
   addCapsule: async (capsule: Capsule) => {
     try {
@@ -54,6 +60,19 @@ export const useCapsules = create<CapsulesState>((set) => ({
       }));
     } catch (err) {
       console.error('Failed to persist capsule to Dexie:', err);
+    }
+  },
+
+  deleteCapsule: async (id: string) => {
+    try {
+      await db.capsules.delete(id);
+      set((state) => ({
+        capsules: state.capsules.filter((c) => c.id !== id),
+        selectedId: state.selectedId === id ? null : state.selectedId,
+        deleteTargetId: state.deleteTargetId === id ? null : state.deleteTargetId,
+      }));
+    } catch (err) {
+      console.error('Failed to delete capsule from Dexie:', err);
     }
   },
 

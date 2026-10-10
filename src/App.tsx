@@ -353,7 +353,6 @@ function TopRightBar({ onOpenSettings }: { onOpenSettings: () => void }) {
  */
 function AddCapsuleButton() {
   const setComposerOpen = useCapsules((state) => state.setComposerOpen);
-  const source = useFog((state) => state.source);
   const replayActive = useFog((state) => state.replay.active);
 
   if (replayActive) return null;
@@ -361,17 +360,17 @@ function AddCapsuleButton() {
   return (
     <button
       onClick={() => setComposerOpen(true)}
-      title="Create memory capsule at current spot"
+      title="Add Memory at current spot"
       style={{
         position: 'absolute',
-        bottom: source === 'sim' ? '88px' : '24px',
+        bottom: '24px',
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 15,
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
-        padding: '10px 20px',
+        padding: '12px 22px',
         borderRadius: '24px',
         backgroundColor: 'var(--amber)',
         color: 'var(--void)',
@@ -391,7 +390,7 @@ function AddCapsuleButton() {
       }}
     >
       <Sparkles size={16} />
-      <span>+ Capsule</span>
+      <span>+ Add Memory</span>
     </button>
   );
 }

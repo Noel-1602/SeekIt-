@@ -17,7 +17,10 @@ export function ReplayBar() {
   // Play animation loop over ~15s
   useEffect(() => {
     if (!replay.active || !isPlaying) {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (animFrameRef.current !== null) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
+      }
       lastTimeRef.current = null;
       return;
     }
@@ -30,13 +33,15 @@ export function ReplayBar() {
       lastTimeRef.current = now;
 
       const progressStep = delta / REPLAY_DURATION_MS;
-      const nextProgress = Math.min(1, replay.progress + progressStep);
+      const current = useFog.getState().replay.progress;
+      const nextProgress = Math.min(1, current + progressStep);
 
       setReplayProgress(nextProgress);
 
       if (nextProgress >= 1) {
         setIsPlaying(false);
         lastTimeRef.current = null;
+        animFrameRef.current = null;
       } else {
         animFrameRef.current = requestAnimationFrame(tick);
       }
@@ -45,9 +50,13 @@ export function ReplayBar() {
     animFrameRef.current = requestAnimationFrame(tick);
 
     return () => {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      if (animFrameRef.current !== null) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
+      }
+      lastTimeRef.current = null;
     };
-  }, [replay.active, replay.progress, isPlaying, setReplayProgress]);
+  }, [replay.active, isPlaying, setReplayProgress]);
 
   if (!replay.active) return null;
 

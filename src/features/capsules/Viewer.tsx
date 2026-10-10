@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useCapsules, canOpen } from '../../store/capsules';
 import { useFog } from '../../store/fog';
@@ -25,26 +25,54 @@ export function Viewer() {
     return capsules.find((c) => c.id === selectedId) || null;
   }, [capsules, selectedId]);
 
+  const isUnlocked = capsule ? canOpen(capsule, userPosition) : false;
+
   // Object URL for blob (photo or voice)
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const blobUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!capsule?.blob) {
+    // Revoke any previous object URL on change or close
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
+    }
+
+    if (!selectedId || !capsule?.blob || !isUnlocked) {
       setBlobUrl(null);
       return;
     }
 
     const url = URL.createObjectURL(capsule.blob);
+    blobUrlRef.current = url;
     setBlobUrl(url);
 
     return () => {
-      URL.revokeObjectURL(url);
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
+      setBlobUrl(null);
     };
-  }, [capsule?.blob]);
+  }, [selectedId, capsule?.blob, isUnlocked]);
+
+  // Close modal on Escape key press
+  useEffect(() => {
+    if (!selectedId) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedId(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedId, setSelectedId]);
 
   if (!selectedId || !capsule) return null;
-
-  const isUnlocked = canOpen(capsule, userPosition);
 
   // Compute distance from user position in meters
   const distanceMeters = userPosition

@@ -306,7 +306,7 @@ export function Composer() {
             </div>
             <div>
               <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text)' }}>
-                Drop Memory Capsule
+                Add Memory
               </div>
               <div
                 style={{
@@ -682,7 +682,7 @@ export function Composer() {
               </div>
               <div>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text)' }}>
-                  Seal Capsule
+                  Seal Memory
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--muted)' }}>
                   Must physically return within ~65m to unlock
@@ -755,7 +755,7 @@ export function Composer() {
             }}
           >
             <Sparkles size={16} />
-            <span>{isSubmitting ? 'Sealing...' : 'Drop Capsule Here'}</span>
+            <span>{isSubmitting ? 'Saving...' : 'Add Memory'}</span>
           </button>
         </div>
       </div>

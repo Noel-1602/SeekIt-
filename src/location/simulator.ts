@@ -122,6 +122,10 @@ export function walkTo(target: LatLng): void {
   // Cancel any existing walk loop
   cancelSimWalk();
 
+  if (!useSimulator.getState().isActive) {
+    return;
+  }
+
   const currentPos = useFog.getState().position ?? DEFAULT_START;
   const initialDistMeters = haversineDistanceKm(currentPos, target) * 1000;
 

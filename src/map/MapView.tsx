@@ -32,15 +32,21 @@ export function MapView({
       attributionControl: { compact: false }, // Preserve OpenFreeMap & OpenStreetMap attribution
     });
 
+    let isMounted = true;
     let cleanupFog: (() => void) | undefined;
 
-    instance.on('load', () => {
+    const onLoad = () => {
+      if (!isMounted) return;
       setMap(instance);
       setMapInstance(instance);
       cleanupFog = initFogLayer(instance);
-    });
+    };
+
+    instance.once('load', onLoad);
 
     return () => {
+      isMounted = false;
+      instance.off('load', onLoad);
       cleanupFog?.();
       instance.remove();
       setMap(null);

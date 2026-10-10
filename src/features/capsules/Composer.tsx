@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { latLngToCell } from 'h3-js';
 import { useFog } from '../../store/fog';
 import { useCapsules } from '../../store/capsules';
+import { isPrivate } from '../privacy/privacy';
 import { H3_RES, PHOTO_MAX_PX, VOICE_MAX_S, DEFAULT_START } from '../../config';
 import type { Capsule, CapsuleType } from '../../types';
 import {
@@ -195,6 +196,11 @@ export function Composer() {
   const handleSave = async () => {
     const pos = userPosition ?? DEFAULT_START;
     const h3Cell = latLngToCell(pos.lat, pos.lng, H3_RES);
+
+    if (isPrivate(h3Cell)) {
+      alert('Cannot drop capsule in a private zone.');
+      return;
+    }
 
     let blob: Blob | undefined;
     let mime: string | undefined;

@@ -1,10 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { MapView } from './map/MapView';
 import { UserDot } from './map/UserDot';
 import { SimControls } from './map/SimControls';
 import { PinsLayer } from './features/capsules/PinsLayer';
 import { Composer } from './features/capsules/Composer';
 import { Viewer } from './features/capsules/Viewer';
+import { ReplayBar } from './features/replay/ReplayBar';
+import { SettingsSheet } from './features/settings/SettingsSheet';
 import { useFog } from './store/fog';
 import { useGps } from './location/gps';
 import { useCapsules } from './store/capsules';
@@ -21,6 +23,8 @@ import {
   AlertCircle,
   ArrowRight,
   Sparkles,
+  History,
+  Settings,
 } from 'lucide-react';
 
 /**
@@ -30,12 +34,17 @@ function HudPanel() {
   const position = useFog((state) => state.position);
   const revealedSize = useFog((state) => state.revealed.size);
   const source = useFog((state) => state.source);
+  const distanceMeters = useFog((state) => state.distanceMeters);
   const resetFog = useFog((state) => state.resetFog);
 
   const gpsError = useGps((state) => state.error);
   const clearGpsError = useGps((state) => state.clearError);
 
   const uncoveredKm2 = (revealedSize * CELL_AREA_KM2).toFixed(3);
+  const distanceFormatted =
+    distanceMeters >= 1000
+      ? `${(distanceMeters / 1000).toFixed(2)} km`
+      : `${Math.round(distanceMeters)} m`;
 
   const handleModeSwitch = (nextSource: 'gps' | 'sim') => {
     void setMode(nextSource);
@@ -92,14 +101,14 @@ function HudPanel() {
               UNFOG
             </div>
             <div style={{ fontSize: '11px', color: 'var(--muted)' }}>
-              Movement Engine • Milestone 3
+              Cartographic Memory Explorer
             </div>
           </div>
         </div>
 
         <button
           onClick={() => void resetFog()}
-          title="Reset Fog (Dexie & State)"
+          title="Reset Fog"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -172,7 +181,7 @@ function HudPanel() {
         </button>
       </div>
 
-      {/* GPS Error Banner with Friendly Switch to Demo Walk */}
+      {/* GPS Error Banner */}
       {source === 'gps' && gpsError && (
         <div
           style={{
@@ -220,7 +229,7 @@ function HudPanel() {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
+          gridTemplateColumns: '1fr 1fr 1fr',
           gap: '8px',
           padding: '10px',
           borderRadius: '10px',
@@ -230,18 +239,26 @@ function HudPanel() {
       >
         <div>
           <div style={{ fontSize: '10px', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            Uncovered Area
+            Area
           </div>
-          <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text)', marginTop: '2px' }}>
-            {uncoveredKm2} <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--muted)' }}>km²</span>
+          <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text)', marginTop: '2px' }}>
+            {uncoveredKm2} <span style={{ fontSize: '10px', fontWeight: 400, color: 'var(--muted)' }}>km²</span>
           </div>
         </div>
         <div>
           <div style={{ fontSize: '10px', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            H3 Res-10 Cells
+            Hexes
           </div>
-          <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--teal)', marginTop: '2px' }}>
-            {revealedSize} <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--muted)' }}>hexes</span>
+          <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--teal)', marginTop: '2px' }}>
+            {revealedSize}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: '10px', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Traveled
+          </div>
+          <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--amber)', marginTop: '2px' }}>
+            {distanceFormatted}
           </div>
         </div>
       </div>
@@ -262,11 +279,84 @@ function HudPanel() {
 }
 
 /**
+ * Top-right Action Bar with Replay toggle and Settings gear buttons.
+ */
+function TopRightBar({ onOpenSettings }: { onOpenSettings: () => void }) {
+  const replay = useFog((state) => state.replay);
+  const startReplay = useFog((state) => state.startReplay);
+  const stopReplay = useFog((state) => state.stopReplay);
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: '16px',
+        right: '16px',
+        zIndex: 10,
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+      }}
+    >
+      <button
+        onClick={() => (replay.active ? stopReplay() : startReplay())}
+        title="Toggle Timeline Replay"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '8px 14px',
+          borderRadius: '20px',
+          backgroundColor: replay.active ? 'var(--teal)' : 'rgba(18, 25, 35, 0.88)',
+          color: replay.active ? 'var(--void)' : 'var(--text)',
+          border: '1px solid var(--border)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+          fontSize: '12px',
+          fontWeight: 700,
+          cursor: 'pointer',
+          transition: 'all 0.15s ease',
+        }}
+      >
+        <History size={15} />
+        <span>Replay</span>
+      </button>
+
+      <button
+        onClick={onOpenSettings}
+        title="Settings & Presentation Tools"
+        style={{
+          width: '38px',
+          height: '38px',
+          borderRadius: '50%',
+          backgroundColor: 'rgba(18, 25, 35, 0.88)',
+          color: 'var(--text)',
+          border: '1px solid var(--border)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+        }}
+      >
+        <Settings size={18} />
+      </button>
+    </div>
+  );
+}
+
+/**
  * Floating button to open the Capsule Composer.
  */
 function AddCapsuleButton() {
   const setComposerOpen = useCapsules((state) => state.setComposerOpen);
   const source = useFog((state) => state.source);
+  const replayActive = useFog((state) => state.replay.active);
+
+  if (replayActive) return null;
 
   return (
     <button
@@ -349,6 +439,9 @@ function LocateMeButton() {
 }
 
 export default function App() {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const replayActive = useFog((state) => state.replay.active);
+
   // Start in Demo Walk simulator on boot
   useEffect(() => {
     void setMode('sim');
@@ -359,15 +452,17 @@ export default function App() {
       <MapView>
         <PinsLayer />
         <UserDot />
-        <SimControls />
+        {!replayActive && <SimControls />}
         <HudPanel />
+        <TopRightBar onOpenSettings={() => setSettingsOpen(true)} />
         <AddCapsuleButton />
         <LocateMeButton />
       </MapView>
 
+      <ReplayBar />
       <Composer />
       <Viewer />
+      <SettingsSheet isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }
-

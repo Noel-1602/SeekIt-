@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import { useMap } from '../../map/useMap';
 import { useCapsules } from '../../store/capsules';
-import { useFog } from '../../store/fog';
+import { useFog, replayCutoffTs } from '../../store/fog';
 
 const ICONS = {
   text: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`,
@@ -20,6 +20,7 @@ export function PinsLayer() {
   const capsules = useCapsules((state) => state.capsules);
   const setSelectedId = useCapsules((state) => state.setSelectedId);
   const revealed = useFog((state) => state.revealed);
+  const replay = useFog((state) => state.replay);
 
   const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
 
@@ -28,15 +29,17 @@ export function PinsLayer() {
 
     const currentMarkers = markersRef.current;
     const activeCapsuleIds = new Set<string>();
+    const cutoff = replayCutoffTs();
 
     for (const capsule of capsules) {
       activeCapsuleIds.add(capsule.id);
 
-      // Check visibility: uncovered ground only
-      const isVisible = revealed.has(capsule.h3);
+      // Check visibility: uncovered ground AND within active replay window
+      const isWithinReplay = cutoff === null || capsule.createdAt <= cutoff;
+      const isVisible = revealed.has(capsule.h3) && isWithinReplay;
 
       if (!isVisible) {
-        // If covered by fog, remove marker if present
+        // If covered by fog or past replay cutoff, remove marker if present
         const existing = currentMarkers.get(capsule.id);
         if (existing) {
           existing.remove();
@@ -124,7 +127,7 @@ export function PinsLayer() {
         currentMarkers.delete(id);
       }
     }
-  }, [map, capsules, revealed, setSelectedId]);
+  }, [map, capsules, revealed, replay, setSelectedId]);
 
   // Cleanup all markers when unmounting
   useEffect(() => {

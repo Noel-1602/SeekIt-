@@ -2,6 +2,7 @@ import { latLngToCell, gridDisk } from 'h3-js';
 import { H3_RES, REVEAL_K, MAX_ACCURACY_M, MAX_SPEED_KMH } from '../config';
 import { db } from '../db';
 import { useFog } from '../store/fog';
+import { isPrivate } from '../features/privacy/privacy';
 import type { Fix, Source, LatLng, RevealedCell } from '../types';
 
 /**
@@ -22,6 +23,7 @@ export function haversineDistanceKm(p1: LatLng, p2: LatLng): number {
 }
 
 let lastAcceptedGpsFix: Fix | null = null;
+let lastAcceptedPos: LatLng | null = null;
 
 export function getLastAcceptedGpsFix(): Fix | null {
   return lastAcceptedGpsFix;
@@ -29,11 +31,14 @@ export function getLastAcceptedGpsFix(): Fix | null {
 
 export function resetLastAcceptedGpsFix(): void {
   lastAcceptedGpsFix = null;
+  lastAcceptedPos = null;
 }
 
 /**
  * Ingests a new position fix from either GPS or the movement simulator.
  * - Filters low-accuracy and high-speed GPS readings.
+ * - Adds distance traveled to stats.
+ * - Respects privacy zones (moves dot but suppresses reveals).
  * - Computes the H3 cell and reveal disk.
  * - Discovers and persists new revealed cells in Dexie and Zustand store.
  * - Updates the current user position.
@@ -73,14 +78,31 @@ export async function ingestPosition(fix: Fix, source: Source): Promise<boolean>
     lastAcceptedGpsFix = fix;
   }
 
+  // Calculate distance traveled since last fix
+  if (lastAcceptedPos) {
+    const stepDistMeters = haversineDistanceKm(lastAcceptedPos, { lat: fix.lat, lng: fix.lng }) * 1000;
+    if (stepDistMeters > 0.5 && stepDistMeters < 5000) {
+      useFog.getState().addDistance(stepDistMeters);
+    }
+  }
+  lastAcceptedPos = { lat: fix.lat, lng: fix.lng };
+
   // Sync active source if it differs
   const store = useFog.getState();
   if (store.source !== source) {
     store.setSource(source);
   }
 
-  // Calculate current H3 cell and reveal disk
+  // Calculate current H3 cell
   const cell = latLngToCell(fix.lat, fix.lng, H3_RES);
+
+  // 3. Privacy check: if current cell is in private zone, update dot only, no reveal
+  if (isPrivate(cell)) {
+    store.setPosition({ lat: fix.lat, lng: fix.lng });
+    return true;
+  }
+
+  // Reveal disk around the cell
   const disk = gridDisk(cell, REVEAL_K);
 
   // Identify newly revealed cells not already present in the store
@@ -104,3 +126,4 @@ export async function ingestPosition(fix: Fix, source: Source): Promise<boolean>
 
   return true;
 }
+

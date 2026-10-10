@@ -1,6 +1,6 @@
 import type { Map as MapLibreMap, GeoJSONSource } from 'maplibre-gl';
 import { cellToBoundary } from 'h3-js';
-import { useFog } from '../store/fog';
+import { useFog, getVisibleRevealed } from '../store/fog';
 
 export const FOG_FILL_SOURCE_ID = 'fog-fill-source';
 export const FOG_EDGE_SOURCE_ID = 'fog-edge-source';
@@ -127,6 +127,8 @@ export function setupFogLayers(map: MapLibreMap): void {
  */
 export function initFogLayer(map: MapLibreMap): () => void {
   let prevRevealedSize = useFog.getState().revealed.size;
+  let prevReplayActive = useFog.getState().replay.active;
+  let prevVisibleSize = prevRevealedSize;
 
   const updateSources = (revealed: Map<string, number>) => {
     const fillSource = map.getSource(FOG_FILL_SOURCE_ID) as GeoJSONSource | undefined;
@@ -142,7 +144,8 @@ export function initFogLayer(map: MapLibreMap): () => void {
 
   const onStyleOrLoadReady = () => {
     setupFogLayers(map);
-    updateSources(useFog.getState().revealed);
+    const visible = getVisibleRevealed(useFog.getState());
+    updateSources(visible);
   };
 
   if (map.isStyleLoaded()) {
@@ -151,13 +154,25 @@ export function initFogLayer(map: MapLibreMap): () => void {
     map.once('load', onStyleOrLoadReady);
   }
 
-  // Subscribe to store: only call setData when revealed.size changes
+  // Subscribe to store: updates when revealed changes OR replay progress/active changes
   const unsubscribe = useFog.subscribe((state) => {
     const currentSize = state.revealed.size;
-    if (currentSize !== prevRevealedSize) {
+    const currentReplayActive = state.replay.active;
+    const visible = getVisibleRevealed(state);
+    const visibleSize = visible.size;
+
+    const shouldUpdate =
+      currentSize !== prevRevealedSize ||
+      currentReplayActive !== prevReplayActive ||
+      (currentReplayActive && visibleSize !== prevVisibleSize);
+
+    if (shouldUpdate) {
       prevRevealedSize = currentSize;
+      prevReplayActive = currentReplayActive;
+      prevVisibleSize = visibleSize;
+
       if (map.isStyleLoaded() && map.getSource(FOG_FILL_SOURCE_ID)) {
-        updateSources(state.revealed);
+        updateSources(visible);
       }
     }
   });

@@ -2,16 +2,27 @@ import { create } from 'zustand';
 import { db } from '../db';
 import type { LatLng, Source, RevealedCell } from '../types';
 
+export interface ReplayState {
+  active: boolean;
+  progress: number; // 0 to 1
+}
+
 export interface FogState {
   position: LatLng | null;
   revealed: Map<string, number>;
   source: Source;
   isTracking: boolean;
+  distanceMeters: number;
+  replay: ReplayState;
 
   setPosition: (pos: LatLng) => void;
   addRevealedCells: (cells: { h3: string; ts: number }[]) => void;
   setSource: (source: Source) => void;
   setIsTracking: (isTracking: boolean) => void;
+  addDistance: (m: number) => void;
+  startReplay: () => void;
+  stopReplay: () => void;
+  setReplayProgress: (p: number) => void;
   hydrateRevealed: () => Promise<void>;
   resetFog: () => Promise<void>;
 }
@@ -21,6 +32,8 @@ export const useFog = create<FogState>((set) => ({
   revealed: new Map<string, number>(),
   source: 'gps',
   isTracking: false,
+  distanceMeters: 0,
+  replay: { active: false, progress: 1 },
 
   setPosition: (pos: LatLng) => set({ position: pos }),
 
@@ -39,6 +52,15 @@ export const useFog = create<FogState>((set) => ({
 
   setIsTracking: (isTracking: boolean) => set({ isTracking }),
 
+  addDistance: (m: number) => set((s) => ({ distanceMeters: s.distanceMeters + m })),
+
+  startReplay: () => set({ replay: { active: true, progress: 0 } }),
+
+  stopReplay: () => set({ replay: { active: false, progress: 1 } }),
+
+  setReplayProgress: (progress: number) =>
+    set({ replay: { active: true, progress: Math.max(0, Math.min(1, progress)) } }),
+
   hydrateRevealed: async () => {
     try {
       const records: RevealedCell[] = await db.cells.toArray();
@@ -55,7 +77,11 @@ export const useFog = create<FogState>((set) => ({
   resetFog: async () => {
     try {
       await db.cells.clear();
-      set({ revealed: new Map<string, number>() });
+      set({
+        revealed: new Map<string, number>(),
+        distanceMeters: 0,
+        replay: { active: false, progress: 1 },
+      });
     } catch (err) {
       console.error('Failed to reset fog:', err);
     }
@@ -70,11 +96,52 @@ if (typeof window !== 'undefined') {
 }
 
 /**
- * Returns whether an H3 cell has been uncovered.
+ * Returns whether an H3 cell has been uncovered (respecting active replay cutoff).
  */
 export function isRevealed(h3: string): boolean {
-  return useFog.getState().revealed.has(h3);
+  const { revealed, replay } = useFog.getState();
+  if (!revealed.has(h3)) return false;
+  if (!replay.active) return true;
+
+  const cutoff = replayCutoffTs();
+  if (cutoff === null) return true;
+  const cellTs = revealed.get(h3) ?? 0;
+  return cellTs <= cutoff;
+}
+
+/**
+ * Returns the timestamp of the last visible cell during replay,
+ * or null if replay is inactive.
+ */
+export function replayCutoffTs(): number | null {
+  const { revealed, replay } = useFog.getState();
+  if (!replay.active) return null;
+  if (revealed.size === 0) return 0;
+
+  const sorted = Array.from(revealed.entries()).sort((a, b) => a[1] - b[1]);
+  const count = Math.floor(replay.progress * sorted.length);
+  if (count <= 0) return 0;
+  return sorted[Math.min(count - 1, sorted.length - 1)][1];
+}
+
+/**
+ * Returns the active map of uncovered cells, filtering to the replay subset if replay is active.
+ */
+export function getVisibleRevealed(state: FogState): Map<string, number> {
+  if (!state.replay.active) {
+    return state.revealed;
+  }
+  const cutoff = replayCutoffTs();
+  if (cutoff === null) return state.revealed;
+  if (cutoff === 0) return new Map();
+
+  const subset = new Map<string, number>();
+  for (const [h3, ts] of state.revealed.entries()) {
+    if (ts <= cutoff) {
+      subset.set(h3, ts);
+    }
+  }
+  return subset;
 }
 
 export default useFog;
-

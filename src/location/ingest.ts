@@ -1,5 +1,5 @@
-import { latLngToCell, gridDisk } from 'h3-js';
-import { H3_RES, REVEAL_K, MAX_ACCURACY_M, MAX_SPEED_KMH } from '../config';
+import { latLngToCell, gridDisk, cellToLatLng } from 'h3-js';
+import { H3_RES, MAX_ACCURACY_M, MAX_SPEED_KMH } from '../config';
 import { db } from '../db';
 import { useFog } from '../store/fog';
 import { isPrivate } from '../features/privacy/privacy';
@@ -102,14 +102,29 @@ export async function ingestPosition(fix: Fix, source: Source): Promise<boolean>
     return true;
   }
 
-  // Reveal disk around the cell
-  const disk = gridDisk(cell, REVEAL_K);
+  // Reveal center cell + closest 3 neighbors (tight 4-cell cluster)
+  const ring1 = gridDisk(cell, 1);
+  const neighbors = ring1.filter((h3) => h3 !== cell);
+
+  const sortedNeighbors = neighbors
+    .map((neighbor) => {
+      const [nLat, nLng] = cellToLatLng(neighbor);
+      const dist = haversineDistanceKm(
+        { lat: fix.lat, lng: fix.lng },
+        { lat: nLat, lng: nLng }
+      );
+      return { neighbor, dist };
+    })
+    .sort((a, b) => a.dist - b.dist);
+
+  const closestNeighbors = sortedNeighbors.slice(0, 3).map((item) => item.neighbor);
+  const cellsToReveal = [cell, ...closestNeighbors];
 
   // Identify newly revealed cells not already present in the store
   const { revealed, addRevealedCells, setPosition } = useFog.getState();
   const newlyRevealed: RevealedCell[] = [];
 
-  for (const h3 of disk) {
+  for (const h3 of cellsToReveal) {
     if (!revealed.has(h3)) {
       newlyRevealed.push({ h3, ts: fix.ts });
     }

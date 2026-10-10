@@ -10,9 +10,10 @@ import { SettingsSheet } from './features/settings/SettingsSheet';
 import { useFog } from './store/fog';
 import { useGps } from './location/gps';
 import { useCapsules } from './store/capsules';
-import { setMode } from './location/mode';
+import { setMode, stopTracking } from './location/mode';
 import { locateMe } from './map/mapActions';
 import { CELL_AREA_KM2 } from './config';
+import { LandingPage } from './features/landing';
 import {
   Compass,
   Radio,
@@ -22,6 +23,7 @@ import {
   Navigation,
   AlertCircle,
   ArrowRight,
+  ArrowLeft,
   Sparkles,
   History,
   Settings,
@@ -281,7 +283,13 @@ function HudPanel() {
 /**
  * Top-right Action Bar with Replay toggle and Settings gear buttons.
  */
-function TopRightBar({ onOpenSettings }: { onOpenSettings: () => void }) {
+function TopRightBar({
+  onOpenSettings,
+  onReturnToLanding,
+}: {
+  onOpenSettings: () => void;
+  onReturnToLanding?: () => void;
+}) {
   const replay = useFog((state) => state.replay);
   const startReplay = useFog((state) => state.startReplay);
   const stopReplay = useFog((state) => state.stopReplay);
@@ -298,6 +306,33 @@ function TopRightBar({ onOpenSettings }: { onOpenSettings: () => void }) {
         gap: '8px',
       }}
     >
+      {onReturnToLanding && (
+        <button
+          onClick={onReturnToLanding}
+          title="Return to Landing Page"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '8px 14px',
+            borderRadius: '20px',
+            backgroundColor: 'rgba(18, 25, 35, 0.88)',
+            color: 'var(--text)',
+            border: '1px solid var(--border)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+            fontSize: '12px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <ArrowLeft size={14} />
+          <span>Landing</span>
+        </button>
+      )}
+
       <button
         onClick={() => (replay.active ? stopReplay() : startReplay())}
         title="Toggle Timeline Replay"
@@ -438,13 +473,52 @@ function LocateMeButton() {
 }
 
 export default function App() {
+  const [showLanding, setShowLanding] = useState<boolean>(() => {
+    const hash = window.location.hash.toLowerCase();
+    return hash !== '#app' && hash !== '#/app' && hash !== '#map';
+  });
+
   const [settingsOpen, setSettingsOpen] = useState(false);
   const replayActive = useFog((state) => state.replay.active);
 
-  // Start in Demo Walk simulator on boot
+  // Deep-link hash listener
   useEffect(() => {
-    void setMode('sim');
+    const handleHashChange = () => {
+      const hash = window.location.hash.toLowerCase();
+      if (hash === '#app' || hash === '#/app' || hash === '#map') {
+        setShowLanding(false);
+      } else if (!hash || hash === '#' || hash === '#how-it-works' || hash === '#capsules' || hash === '#privacy') {
+        setShowLanding(true);
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
+
+  // Manage Demo Walk lifecycle and scroll locks based on whether map or landing is active
+  useEffect(() => {
+    if (!showLanding) {
+      document.body.classList.add('in-map-app');
+      // Start in Demo Walk simulator only when entering the map
+      void setMode('sim');
+    } else {
+      document.body.classList.remove('in-map-app');
+      // Halt simulation/tracking while landing page is visible
+      void stopTracking();
+    }
+  }, [showLanding]);
+
+  if (showLanding) {
+    return (
+      <LandingPage
+        onLaunchApp={() => {
+          setShowLanding(false);
+          window.location.hash = '#app';
+        }}
+      />
+    );
+  }
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -453,7 +527,13 @@ export default function App() {
         <UserDot />
         {!replayActive && <SimControls />}
         <HudPanel />
-        <TopRightBar onOpenSettings={() => setSettingsOpen(true)} />
+        <TopRightBar
+          onOpenSettings={() => setSettingsOpen(true)}
+          onReturnToLanding={() => {
+            setShowLanding(true);
+            window.location.hash = '';
+          }}
+        />
         <AddCapsuleButton />
         <LocateMeButton />
       </MapView>

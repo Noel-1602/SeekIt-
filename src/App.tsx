@@ -1,60 +1,45 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { MapView } from './map/MapView';
 import { UserDot } from './map/UserDot';
-import { useMap } from './map/useMap';
+import { SimControls } from './map/SimControls';
 import { useFog } from './store/fog';
-import { ingestPosition } from './location/ingest';
-import { DEFAULT_START, CELL_AREA_KM2 } from './config';
-import { Compass, Footprints, RotateCcw, MapPin, Eye } from 'lucide-react';
+import { useGps } from './location/gps';
+import { setMode } from './location/mode';
+import { locateMe } from './map/mapActions';
+import { CELL_AREA_KM2 } from './config';
+import {
+  Compass,
+  Radio,
+  Footprints,
+  RotateCcw,
+  MapPin,
+  Navigation,
+  AlertCircle,
+  ArrowRight,
+} from 'lucide-react';
 
-function HudControls() {
-  const map = useMap();
+/**
+ * Top-left HUD panel displaying metrics, source toggle, and GPS status banners.
+ */
+function HudPanel() {
   const position = useFog((state) => state.position);
   const revealedSize = useFog((state) => state.revealed.size);
   const source = useFog((state) => state.source);
   const resetFog = useFog((state) => state.resetFog);
 
-  const [stepCount, setStepCount] = useState(0);
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  // Ingest initial starting fix at DEFAULT_START
-  const handleRevealStart = async () => {
-    setIsProcessing(true);
-    try {
-      await ingestPosition({ lat: DEFAULT_START.lat, lng: DEFAULT_START.lng, ts: Date.now() }, 'sim');
-      map?.flyTo({ center: [DEFAULT_START.lng, DEFAULT_START.lat], zoom: 16, speed: 1.2 });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // Walk simulated step (~35 meters north-east per click)
-  const handleWalkStep = async () => {
-    setIsProcessing(true);
-    try {
-      const nextStep = stepCount + 1;
-      setStepCount(nextStep);
-
-      const baseLat = position?.lat ?? DEFAULT_START.lat;
-      const baseLng = position?.lng ?? DEFAULT_START.lng;
-
-      // ~35 meters offset in lat/lng
-      const nextLat = baseLat + 0.00032;
-      const nextLng = baseLng + 0.00032;
-
-      await ingestPosition({ lat: nextLat, lng: nextLng, ts: Date.now() }, 'sim');
-      map?.easeTo({ center: [nextLng, nextLat], zoom: 16, duration: 600 });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleReset = async () => {
-    setStepCount(0);
-    await resetFog();
-  };
+  const gpsError = useGps((state) => state.error);
+  const clearGpsError = useGps((state) => state.clearError);
 
   const uncoveredKm2 = (revealedSize * CELL_AREA_KM2).toFixed(3);
+
+  const handleModeSwitch = (nextSource: 'gps' | 'sim') => {
+    void setMode(nextSource);
+  };
+
+  const handleSwitchToDemoWalk = () => {
+    clearGpsError();
+    void setMode('sim');
+  };
 
   return (
     <div
@@ -67,7 +52,7 @@ function HudControls() {
         width: 'calc(100vw - 32px)',
         padding: '16px',
         borderRadius: '16px',
-        backgroundColor: 'rgba(18, 25, 35, 0.85)',
+        backgroundColor: 'rgba(18, 25, 35, 0.88)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
         border: '1px solid var(--border)',
@@ -75,48 +60,158 @@ function HudControls() {
         display: 'flex',
         flexDirection: 'column',
         gap: '12px',
+        pointerEvents: 'auto',
       }}
+      onClick={(e) => e.stopPropagation()}
     >
-      {/* Title & Status */}
+      {/* Title & App Branding */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: '28px',
-              height: '28px',
-              borderRadius: '8px',
+              width: '32px',
+              height: '32px',
+              borderRadius: '10px',
               backgroundColor: 'var(--teal-dim)',
               color: 'var(--teal)',
+              boxShadow: '0 0 12px rgba(45, 212, 191, 0.25)',
             }}
           >
-            <Compass size={18} />
+            <Compass size={20} />
           </div>
           <div>
-            <div style={{ fontSize: '14px', fontWeight: 700, letterSpacing: '-0.01em' }}>UNFOG</div>
-            <div style={{ fontSize: '11px', color: 'var(--muted)' }}>Milestone 2B • Fog & Map Engine</div>
+            <div style={{ fontSize: '15px', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text)' }}>
+              UNFOG
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--muted)' }}>
+              Movement Engine • Milestone 3
+            </div>
           </div>
         </div>
 
-        <div
+        <button
+          onClick={() => void resetFog()}
+          title="Reset Fog (Dexie & State)"
           style={{
-            fontSize: '11px',
-            padding: '3px 8px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(45, 212, 191, 0.1)',
-            color: 'var(--teal)',
-            border: '1px solid rgba(45, 212, 191, 0.25)',
-            textTransform: 'uppercase',
-            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '8px',
+            borderRadius: '8px',
+            backgroundColor: 'var(--surface-hover)',
+            color: 'var(--muted)',
+            border: '1px solid var(--border)',
+            cursor: 'pointer',
           }}
         >
-          {source}
-        </div>
+          <RotateCcw size={14} />
+        </button>
       </div>
 
-      {/* Metrics Row */}
+      {/* Mode Toggle Switch (Live GPS / Demo Walk) */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          backgroundColor: 'rgba(0, 0, 0, 0.4)',
+          padding: '3px',
+          borderRadius: '10px',
+          border: '1px solid rgba(255, 255, 255, 0.06)',
+        }}
+      >
+        <button
+          onClick={() => handleModeSwitch('gps')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            padding: '8px 10px',
+            borderRadius: '8px',
+            border: 'none',
+            fontSize: '12px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            backgroundColor: source === 'gps' ? 'var(--teal)' : 'transparent',
+            color: source === 'gps' ? 'var(--void)' : 'var(--muted)',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <Radio size={14} />
+          <span>Live GPS</span>
+        </button>
+
+        <button
+          onClick={() => handleModeSwitch('sim')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            padding: '8px 10px',
+            borderRadius: '8px',
+            border: 'none',
+            fontSize: '12px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            backgroundColor: source === 'sim' ? 'var(--teal)' : 'transparent',
+            color: source === 'sim' ? 'var(--void)' : 'var(--muted)',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <Footprints size={14} />
+          <span>Demo Walk</span>
+        </button>
+      </div>
+
+      {/* GPS Error Banner with Friendly Switch to Demo Walk */}
+      {source === 'gps' && gpsError && (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            padding: '10px 12px',
+            borderRadius: '10px',
+            backgroundColor: 'rgba(239, 68, 68, 0.12)',
+            border: '1px solid rgba(239, 68, 68, 0.35)',
+            color: '#fca5a5',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+            <AlertCircle size={16} color="#ef4444" style={{ flexShrink: 0, marginTop: '2px' }} />
+            <div style={{ fontSize: '11px', lineHeight: 1.4, color: 'var(--text)' }}>
+              {gpsError}
+            </div>
+          </div>
+          <button
+            onClick={handleSwitchToDemoWalk}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              backgroundColor: 'var(--teal)',
+              color: 'var(--void)',
+              border: 'none',
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              alignSelf: 'flex-start',
+            }}
+          >
+            <span>Switch to Demo Walk</span>
+            <ArrowRight size={12} />
+          </button>
+        </div>
+      )}
+
+      {/* Discovery Metrics Row */}
       <div
         style={{
           display: 'grid',
@@ -129,20 +224,24 @@ function HudControls() {
         }}
       >
         <div>
-          <div style={{ fontSize: '10px', color: 'var(--muted)', textTransform: 'uppercase' }}>Uncovered Area</div>
-          <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text)', marginTop: '2px' }}>
+          <div style={{ fontSize: '10px', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Uncovered Area
+          </div>
+          <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text)', marginTop: '2px' }}>
             {uncoveredKm2} <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--muted)' }}>km²</span>
           </div>
         </div>
         <div>
-          <div style={{ fontSize: '10px', color: 'var(--muted)', textTransform: 'uppercase' }}>H3 Res-10 Cells</div>
-          <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--teal)', marginTop: '2px' }}>
+          <div style={{ fontSize: '10px', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            H3 Res-10 Cells
+          </div>
+          <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--teal)', marginTop: '2px' }}>
             {revealedSize} <span style={{ fontSize: '11px', fontWeight: 400, color: 'var(--muted)' }}>hexes</span>
           </div>
         </div>
       </div>
 
-      {/* Position readout */}
+      {/* Position coordinates readout */}
       <div style={{ fontSize: '12px', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
         <MapPin size={14} color="var(--teal)" />
         {position ? (
@@ -150,87 +249,68 @@ function HudControls() {
             {position.lat.toFixed(5)}, {position.lng.toFixed(5)}
           </span>
         ) : (
-          <span>No position fixed yet</span>
+          <span>Acquiring position fix...</span>
         )}
-      </div>
-
-      {/* Action Buttons */}
-      <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-        <button
-          onClick={handleRevealStart}
-          disabled={isProcessing}
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '6px',
-            padding: '10px 12px',
-            borderRadius: '8px',
-            backgroundColor: 'var(--surface-hover)',
-            color: 'var(--text)',
-            border: '1px solid var(--border)',
-            fontSize: '12px',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          <Eye size={14} color="var(--amber)" />
-          <span>Punch Start</span>
-        </button>
-
-        <button
-          onClick={handleWalkStep}
-          disabled={isProcessing}
-          style={{
-            flex: 1.2,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '6px',
-            padding: '10px 12px',
-            borderRadius: '8px',
-            backgroundColor: 'var(--teal)',
-            color: 'var(--void)',
-            border: 'none',
-            fontSize: '12px',
-            fontWeight: 700,
-            cursor: 'pointer',
-          }}
-        >
-          <Footprints size={15} />
-          <span>Walk Step</span>
-        </button>
-
-        <button
-          onClick={handleReset}
-          disabled={isProcessing}
-          title="Reset Fog (Dexie & State)"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '10px',
-            borderRadius: '8px',
-            backgroundColor: 'var(--surface-hover)',
-            color: 'var(--muted)',
-            border: '1px solid var(--border)',
-            cursor: 'pointer',
-          }}
-        >
-          <RotateCcw size={14} />
-        </button>
       </div>
     </div>
   );
 }
 
+/**
+ * Floating Locate Me button positioned at the bottom right.
+ */
+function LocateMeButton() {
+  return (
+    <button
+      onClick={() => locateMe()}
+      title="Locate Me (Center Camera)"
+      style={{
+        position: 'absolute',
+        bottom: '24px',
+        right: '24px',
+        zIndex: 10,
+        width: '46px',
+        height: '46px',
+        borderRadius: '50%',
+        backgroundColor: 'rgba(18, 25, 35, 0.92)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        border: '1px solid var(--border)',
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+        color: 'var(--teal)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        transition: 'transform 0.15s ease, border-color 0.15s ease',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = 'var(--teal)';
+        e.currentTarget.style.transform = 'scale(1.05)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = 'var(--border)';
+        e.currentTarget.style.transform = 'scale(1)';
+      }}
+    >
+      <Navigation size={20} />
+    </button>
+  );
+}
+
 export default function App() {
+  // Start in Demo Walk simulator on boot
+  useEffect(() => {
+    void setMode('sim');
+  }, []);
+
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
       <MapView>
         <UserDot />
-        <HudControls />
+        <SimControls />
+        <HudPanel />
+        <LocateMeButton />
       </MapView>
     </div>
   );

@@ -4,6 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { STYLE_URL, DEFAULT_START } from '../config';
 import { MapContext } from './useMap';
 import { initFogLayer } from './fogLayer';
+import { setMapInstance } from './mapActions';
 
 export interface MapViewProps {
   children?: React.ReactNode;
@@ -35,6 +36,7 @@ export function MapView({
 
     instance.on('load', () => {
       setMap(instance);
+      setMapInstance(instance);
       cleanupFog = initFogLayer(instance);
     });
 
@@ -42,6 +44,7 @@ export function MapView({
       cleanupFog?.();
       instance.remove();
       setMap(null);
+      setMapInstance(null);
     };
   }, [initialCenter, initialZoom]);
 

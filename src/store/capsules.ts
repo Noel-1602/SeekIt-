@@ -46,9 +46,17 @@ export const useCapsules = create<CapsulesState>((set) => ({
   selectedId: null,
   deleteTargetId: null,
 
-  setComposerOpen: (open: boolean) => set({ composerOpen: open }),
+  setComposerOpen: (open: boolean) =>
+    set({
+      composerOpen: open,
+      ...(open ? { selectedId: null } : {}),
+    }),
 
-  setSelectedId: (id: string | null) => set({ selectedId: id }),
+  setSelectedId: (id: string | null) =>
+    set({
+      selectedId: id,
+      ...(id ? { composerOpen: false } : {}),
+    }),
 
   setDeleteTargetId: (id: string | null) => set({ deleteTargetId: id }),
 

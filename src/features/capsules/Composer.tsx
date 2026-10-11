@@ -26,6 +26,7 @@ export function Composer() {
   const addCapsule = useCapsules((state) => state.addCapsule);
   const userPosition = useFog((state) => state.position);
 
+  const [draftId, setDraftId] = useState<string>(() => crypto.randomUUID());
   const [activeTab, setActiveTab] = useState<CapsuleType>('text');
   const [title, setTitle] = useState('');
   const [text, setText] = useState('');
@@ -37,6 +38,7 @@ export function Composer() {
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
   const [photoMime, setPhotoMime] = useState<string>('image/jpeg');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const photoPreviewUrlRef = useRef<string | null>(null);
 
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -47,27 +49,121 @@ export function Composer() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordTimerRef = useRef<number | null>(null);
+  const voicePreviewUrlRef = useRef<string | null>(null);
 
-  // Clean up object URLs on unmount or reset
+  // Helper to completely reset composer form state and generate a fresh draft UUID
+  const resetFormState = () => {
+    // Stop recording and stream tracks if ongoing
+    if (mediaRecorderRef.current) {
+      if (mediaRecorderRef.current.state === 'recording') {
+        try {
+          mediaRecorderRef.current.stop();
+        } catch {
+          // ignore
+        }
+      }
+      if (mediaRecorderRef.current.stream) {
+        mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
+      }
+      mediaRecorderRef.current = null;
+    }
+
+    if (recordTimerRef.current) {
+      clearInterval(recordTimerRef.current);
+      recordTimerRef.current = null;
+    }
+
+    // Revoke and clear photo preview
+    if (photoPreviewUrlRef.current) {
+      URL.revokeObjectURL(photoPreviewUrlRef.current);
+      photoPreviewUrlRef.current = null;
+    }
+    setPhotoBlob(null);
+    setPhotoPreviewUrl(null);
+    setPhotoMime('image/jpeg');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+
+    // Revoke and clear voice preview
+    if (voicePreviewUrlRef.current) {
+      URL.revokeObjectURL(voicePreviewUrlRef.current);
+      voicePreviewUrlRef.current = null;
+    }
+    setIsRecording(false);
+    setRecordSeconds(0);
+    setVoiceBlob(null);
+    setVoiceMime(null);
+    setVoicePreviewUrl(null);
+    audioChunksRef.current = [];
+
+    // Reset base fields
+    setActiveTab('text');
+    setTitle('');
+    setText('');
+    setIsSealed(false);
+    setIsSubmitting(false);
+
+    // Generate brand-new unique draft UUID
+    setDraftId(crypto.randomUUID());
+  };
+
+  // Detect when isOpen transitions to true and cleanly reset all fields
+  const prevIsOpenRef = useRef(false);
+  useEffect(() => {
+    if (isOpen && !prevIsOpenRef.current) {
+      resetFormState();
+    }
+    prevIsOpenRef.current = isOpen;
+  }, [isOpen]);
+
+  // Clean up object URLs on component unmount
   useEffect(() => {
     return () => {
-      if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
-      if (voicePreviewUrl) URL.revokeObjectURL(voicePreviewUrl);
-      if (recordTimerRef.current) clearInterval(recordTimerRef.current);
+      if (photoPreviewUrlRef.current) {
+        URL.revokeObjectURL(photoPreviewUrlRef.current);
+        photoPreviewUrlRef.current = null;
+      }
+      if (voicePreviewUrlRef.current) {
+        URL.revokeObjectURL(voicePreviewUrlRef.current);
+        voicePreviewUrlRef.current = null;
+      }
+      if (recordTimerRef.current) {
+        clearInterval(recordTimerRef.current);
+        recordTimerRef.current = null;
+      }
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-        mediaRecorderRef.current.stop();
+        try {
+          mediaRecorderRef.current.stop();
+        } catch {
+          // ignore
+        }
       }
     };
-  }, [photoPreviewUrl, voicePreviewUrl]);
-
-  if (!isOpen) return null;
+  }, []);
 
   const handleClose = () => {
-    if (isRecording) {
-      stopRecording();
-    }
+    resetFormState();
     setComposerOpen(false);
   };
+
+  // Close modal on Escape key press
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
+
+  if (!isOpen) return null;
 
   // --- Photo compression handler ---
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -102,8 +198,9 @@ export function Composer() {
         canvas.toBlob(
           (blob) => {
             if (!blob) return;
-            if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+            if (photoPreviewUrlRef.current) URL.revokeObjectURL(photoPreviewUrlRef.current);
             const preview = URL.createObjectURL(blob);
+            photoPreviewUrlRef.current = preview;
             setPhotoBlob(blob);
             setPhotoPreviewUrl(preview);
             setPhotoMime('image/jpeg');
@@ -146,8 +243,10 @@ export function Composer() {
         const fullBlob = new Blob(audioChunksRef.current, { type: mime });
         setVoiceBlob(fullBlob);
         setVoiceMime(mime);
-        if (voicePreviewUrl) URL.revokeObjectURL(voicePreviewUrl);
-        setVoicePreviewUrl(URL.createObjectURL(fullBlob));
+        if (voicePreviewUrlRef.current) URL.revokeObjectURL(voicePreviewUrlRef.current);
+        const preview = URL.createObjectURL(fullBlob);
+        voicePreviewUrlRef.current = preview;
+        setVoicePreviewUrl(preview);
 
         // Stop all media tracks
         stream.getTracks().forEach((track) => track.stop());
@@ -187,7 +286,10 @@ export function Composer() {
     stopRecording();
     setVoiceBlob(null);
     setVoiceMime(null);
-    if (voicePreviewUrl) URL.revokeObjectURL(voicePreviewUrl);
+    if (voicePreviewUrlRef.current) {
+      URL.revokeObjectURL(voicePreviewUrlRef.current);
+      voicePreviewUrlRef.current = null;
+    }
     setVoicePreviewUrl(null);
     setRecordSeconds(0);
   };
@@ -224,7 +326,7 @@ export function Composer() {
     setIsSubmitting(true);
     try {
       const capsule: Capsule = {
-        id: crypto.randomUUID(),
+        id: draftId || crypto.randomUUID(),
         lat: pos.lat,
         lng: pos.lng,
         h3: h3Cell,

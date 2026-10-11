@@ -125,13 +125,17 @@ function TopRightBar({
  */
 function AddCapsuleButton() {
   const setComposerOpen = useCapsules((state) => state.setComposerOpen);
+  const setSelectedId = useCapsules((state) => state.setSelectedId);
   const replayActive = useFog((state) => state.replay.active);
 
   if (replayActive) return null;
 
   return (
     <button
-      onClick={() => setComposerOpen(true)}
+      onClick={() => {
+        setSelectedId(null);
+        setComposerOpen(true);
+      }}
       title="Add Memory at current spot"
       style={{
         position: 'absolute',

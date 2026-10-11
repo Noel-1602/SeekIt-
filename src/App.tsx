@@ -18,13 +18,20 @@ import {
   Sparkles,
   History,
   Settings,
+  Home,
 } from 'lucide-react';
-
+import { LandingPage } from './features/landing/LandingPage';
 
 /**
- * Top-right Action Bar with Replay toggle and Settings gear buttons.
+ * Top-right Action Bar with Replay toggle, Landing page button, and Settings gear buttons.
  */
-function TopRightBar({ onOpenSettings }: { onOpenSettings: () => void }) {
+function TopRightBar({
+  onOpenSettings,
+  onReturnHome,
+}: {
+  onOpenSettings: () => void;
+  onReturnHome: () => void;
+}) {
   const replay = useFog((state) => state.replay);
   const startReplay = useFog((state) => state.startReplay);
   const stopReplay = useFog((state) => state.stopReplay);
@@ -41,6 +48,28 @@ function TopRightBar({ onOpenSettings }: { onOpenSettings: () => void }) {
         gap: '8px',
       }}
     >
+      <button
+        onClick={onReturnHome}
+        title="Return to Landing Page & Overview"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '8px 14px',
+          borderRadius: '20px',
+          backgroundColor: '#CCFF00',
+          color: '#111111',
+          border: '1.5px solid #111111',
+          boxShadow: '0 4px 14px rgba(0, 0, 0, 0.4)',
+          fontSize: '12px',
+          fontWeight: 800,
+          cursor: 'pointer',
+          transition: 'all 0.15s ease',
+        }}
+      >
+        <Home size={15} />
+        <span>About / Home</span>
+      </button>
       <button
         onClick={() => (replay.active ? stopReplay() : startReplay())}
         title="Toggle Timeline Replay"
@@ -183,11 +212,39 @@ function LocateMeButton() {
 export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const replayActive = useFog((state) => state.replay.active);
+  const [view, setView] = useState<'landing' | 'map'>(() => {
+    return window.location.hash === '#map' || window.location.search.includes('view=map')
+      ? 'map'
+      : 'landing';
+  });
 
-  // Start in Demo Walk simulator on boot
+  // Listen to hash changes for browser back/forward buttons
   useEffect(() => {
-    void setMode('sim');
+    const handleHashChange = () => {
+      if (window.location.hash === '#map') {
+        setView('map');
+      } else if (window.location.hash === '' || window.location.hash === '#') {
+        setView('landing');
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
+
+  const handleExplore = (source: 'gps' | 'sim' = 'sim') => {
+    void setMode(source);
+    setView('map');
+    window.location.hash = 'map';
+  };
+
+  const handleReturnHome = () => {
+    setView('landing');
+    window.location.hash = '';
+  };
+
+  if (view === 'landing') {
+    return <LandingPage onExplore={handleExplore} />;
+  }
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -196,7 +253,10 @@ export default function App() {
         <UserDot />
         {!replayActive && <SimControls />}
         <HudPanel />
-        <TopRightBar onOpenSettings={() => setSettingsOpen(true)} />
+        <TopRightBar
+          onOpenSettings={() => setSettingsOpen(true)}
+          onReturnHome={handleReturnHome}
+        />
         <AddCapsuleButton />
         <LocateMeButton />
       </MapView>
@@ -209,3 +269,4 @@ export default function App() {
     </div>
   );
 }
+

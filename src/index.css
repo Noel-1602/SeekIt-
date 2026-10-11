@@ -11,7 +11,20 @@
   --text: #e6edf3;
   --muted: #8b98a5;
   --border: rgba(255, 255, 255, 0.1);
-  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  /* Neo-Brutalist Tokens */
+  --cream: #F5F2EB;
+  --cream-light: #FFFDF9;
+  --neo-black: #111111;
+  --neo-lime: #CCFF00;
+  --neo-lime-hover: #D8FF26;
+  --neo-teal: #2DD4BF;
+  --neo-amber: #FFB800;
+  --neo-coral: #FF4D4D;
+  --font-display: 'Space Grotesk', -apple-system, sans-serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-family: var(--font-body);
 }
 
 * {
@@ -30,7 +43,55 @@ body,
   background-color: var(--void);
   color: var(--text);
   font-family: var(--font-family);
-  user-select: none;
+}
+
+/* Neo-Brutalist Marquee Animation */
+@keyframes neo-marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.neo-marquee-content {
+  display: flex;
+  white-space: nowrap;
+  animation: neo-marquee 24s linear infinite;
+}
+
+.neo-marquee-content:hover {
+  animation-play-state: paused;
+}
+
+/* Custom Scrollbar for Landing Page */
+.landing-scroll-container {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  user-select: text;
+  background-color: var(--cream);
+  color: var(--neo-black);
+}
+
+.landing-scroll-container::-webkit-scrollbar {
+  width: 10px;
+}
+
+.landing-scroll-container::-webkit-scrollbar-track {
+  background: #E8E4DA;
+  border-left: 2px solid #111;
+}
+
+.landing-scroll-container::-webkit-scrollbar-thumb {
+  background: #CCFF00;
+  border: 2px solid #111;
+}
+
+.landing-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #B5E600;
 }
 
 /* User Dot Marker styles */

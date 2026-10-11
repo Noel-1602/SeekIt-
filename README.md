@@ -35,6 +35,7 @@ To test SeekIt immediately without walking outside, use the built-in **Demo Walk
 | **5. Drop a Capsule** | Click the floating **"+ Add Memory"** button at the bottom center. | Choose **Text**, attach a **Photo**, or record a **Voice Note**. Toggle **"Seal it"** to proximity-lock. |
 | **6. Test Proximity Unlock** | Tap any pin on the map. Walk toward or away from a sealed padlock pin. | Out-of-range pins display locked status; arriving within 1 cell unlocks the secret. |
 | **7. Inspect HUD** | Tap the **HUD icon (Compass)** in top-left. | Drawer slides out showing real-time stats: cells cleared, km² uncovered, distance travelled, and GPS/Sim source toggle. |
+| **8. Planetary Progression** | Inspect the **Earth Explored** bar in top-right corner. | Live 4-decimal progression (`0.0001%` per ~40m) benchmarked against Earth's 40,075 km circumference and 148.94M km² explorable landmass. Tap to open full Planetary Telemetry drawer. |
 
 ---
 
@@ -79,6 +80,12 @@ To test SeekIt immediately without walking outside, use the built-in **Demo Walk
 ### 6. 🛡️ Sovereign Privacy & Exclusion Zones
 - **100% Local-First Storage**: Raw coordinate traces and audio files never leave the device. Stored locally via Dexie (IndexedDB).
 - **Custom Privacy Exclusion Zones**: Users can designate exclusion radii around their home or workplace. Inside these zones, fog is never lifted and capsules cannot be created.
+
+### 7. 🌍 Planetary Exploration Progression System (Top-Right HUD)
+- **True Cartographic Progression**: Zero randomized or mock percentages. Calculates real-time progress using WGS 84 planetary geodesy against Earth's 40,075,017-meter equatorial circumference and 148,940,000 km² explorable landmass.
+- **4-Decimal Precision (`0.0001%`)**: Exactly every ~40.075 meters walked advances the global progression counter by 0.0001%.
+- **Explorer Milestone Tiers**: Dynamic ranks ranging from *Neighborhood Scout* to *City Pathfinder*, *Regional Nomad*, *Continental Trekker*, and *Planetary Circumnavigator*.
+- **Planetary Telemetry Drawer**: Tap the top-right badge to reveal comprehensive telemetry: live distance, land area cleared, H3 hexes unlocked, scale mode toggles, and scientific integrity verification notes.
 
 ---
 

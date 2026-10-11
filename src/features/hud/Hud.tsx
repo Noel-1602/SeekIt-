@@ -4,7 +4,6 @@ import { useGps } from '../../location/gps';
 import { setMode } from '../../location/mode';
 import { CELL_AREA_KM2 } from '../../config';
 import {
-  Compass,
   Radio,
   Footprints,
   RotateCcw,
@@ -13,13 +12,18 @@ import {
   ArrowRight,
   ChevronRight,
   ChevronLeft,
+  Home,
 } from 'lucide-react';
+
+export interface HudPanelProps {
+  onReturnHome?: () => void;
+}
 
 /**
  * Collapsible sliding HUD panel tucked off the top-left edge of the screen.
  * Expands into a drawer with discovery metrics, source toggle, and coordinates.
  */
-export function HudPanel() {
+export function HudPanel({ onReturnHome }: HudPanelProps = {}) {
   const [isOpen, setIsOpen] = useState(false);
 
   const position = useFog((state) => state.position);
@@ -58,27 +62,76 @@ export function HudPanel() {
   }, [isOpen]);
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        top: '16px',
-        left: '16px',
-        zIndex: 30,
-        transform: isOpen ? 'translateX(0)' : 'translateX(calc(-100% - 16px))',
-        transition: 'transform 300ms cubic-bezier(0.16, 1, 0.3, 1)',
-        willChange: 'transform',
-        display: 'flex',
-        alignItems: 'flex-start',
-        pointerEvents: 'none',
-      }}
-    >
-      {/* Sliding HUD Card */}
+    <>
+      {/* Top Left Most Corner Home Button */}
+      {onReturnHome && (
+        <button
+          onClick={onReturnHome}
+          title="Return to Landing Page & Overview"
+          aria-label="Return to Landing Page & Overview"
+          style={{
+            position: 'absolute',
+            top: '16px',
+            left: '16px',
+            zIndex: 35,
+            width: '38px',
+            height: '38px',
+            borderRadius: '12px',
+            backgroundColor: 'rgba(15, 23, 42, 0.85)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid var(--border)',
+            color: '#CCFF00',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            pointerEvents: 'auto',
+            transition:
+              'background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = '#CCFF00';
+            e.currentTarget.style.boxShadow =
+              '0 8px 24px rgba(0, 0, 0, 0.4), 0 0 14px rgba(204, 255, 0, 0.35)';
+            e.currentTarget.style.transform = 'scale(1.05)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'var(--border)';
+            e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.4)';
+            e.currentTarget.style.transform = 'scale(1)';
+          }}
+        >
+          <Home size={18} />
+        </button>
+      )}
+
       <div
         style={{
-          width: 'calc(100vw - 84px)',
-          maxWidth: '360px',
-          padding: '16px',
-          borderRadius: '16px',
+          position: 'absolute',
+          top: '16px',
+          left: onReturnHome ? '62px' : '16px',
+          zIndex: 30,
+          transform: isOpen
+            ? 'translateX(0)'
+            : onReturnHome
+            ? 'translateX(calc(-100% - 62px))'
+            : 'translateX(calc(-100% - 16px))',
+          transition: 'transform 300ms cubic-bezier(0.16, 1, 0.3, 1)',
+          willChange: 'transform',
+          display: 'flex',
+          alignItems: 'flex-start',
+          pointerEvents: 'none',
+        }}
+      >
+        {/* Sliding HUD Card */}
+        <div
+          style={{
+            width: onReturnHome ? 'calc(100vw - 130px)' : 'calc(100vw - 84px)',
+            maxWidth: '360px',
+            padding: '16px',
+            borderRadius: '16px',
           backgroundColor: 'rgba(15, 23, 42, 0.85)',
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
@@ -102,13 +155,18 @@ export function HudPanel() {
                 justifyContent: 'center',
                 width: '32px',
                 height: '32px',
-                borderRadius: '10px',
-                backgroundColor: 'var(--teal-dim)',
-                color: 'var(--teal)',
+                borderRadius: '8px',
+                border: '1px solid var(--border)',
                 boxShadow: '0 0 12px rgba(45, 212, 191, 0.25)',
+                overflow: 'hidden',
+                backgroundColor: 'rgba(15, 23, 42, 0.9)',
               }}
             >
-              <Compass size={20} />
+              <img
+                src="/logo.png"
+                alt="SeekIt"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
             </div>
             <div>
               <div style={{ fontSize: '15px', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text)' }}>
@@ -309,7 +367,11 @@ export function HudPanel() {
         style={{
           position: 'absolute',
           top: '0px',
-          left: 'calc(100% + 16px)',
+          left: isOpen
+            ? 'calc(100% + 12px)'
+            : onReturnHome
+            ? 'calc(100% + 62px)'
+            : 'calc(100% + 16px)',
           width: '38px',
           height: '38px',
           borderRadius: '12px',
@@ -324,7 +386,8 @@ export function HudPanel() {
           justifyContent: 'center',
           cursor: 'pointer',
           pointerEvents: 'auto',
-          transition: 'background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
+          transition:
+            'left 300ms cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.borderColor = 'var(--teal)';
@@ -342,6 +405,7 @@ export function HudPanel() {
         {isOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
       </button>
     </div>
+    </>
   );
 }
 

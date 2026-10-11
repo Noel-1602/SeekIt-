@@ -13,24 +13,22 @@ import { useCapsules } from './store/capsules';
 import { setMode } from './location/mode';
 import { locateMe } from './map/mapActions';
 import { HudPanel } from './features/hud/Hud';
+import { ProgressionBar } from './features/hud/ProgressionBar';
 import {
   Navigation,
   Sparkles,
   History,
   Settings,
-  Home,
 } from 'lucide-react';
 import { LandingPage } from './features/landing/LandingPage';
 
 /**
- * Top-right Action Bar with Replay toggle, Landing page button, and Settings gear buttons.
+ * Top-right Action Bar with Exploration Progression Bar, Replay toggle, and Settings gear buttons.
  */
 function TopRightBar({
   onOpenSettings,
-  onReturnHome,
 }: {
   onOpenSettings: () => void;
-  onReturnHome: () => void;
 }) {
   const replay = useFog((state) => state.replay);
   const startReplay = useFog((state) => state.startReplay);
@@ -42,34 +40,14 @@ function TopRightBar({
         position: 'absolute',
         top: '16px',
         right: '16px',
-        zIndex: 10,
+        zIndex: 25,
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
       }}
     >
-      <button
-        onClick={onReturnHome}
-        title="Return to Landing Page & Overview"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          padding: '8px 14px',
-          borderRadius: '20px',
-          backgroundColor: '#CCFF00',
-          color: '#111111',
-          border: '1.5px solid #111111',
-          boxShadow: '0 4px 14px rgba(0, 0, 0, 0.4)',
-          fontSize: '12px',
-          fontWeight: 800,
-          cursor: 'pointer',
-          transition: 'all 0.15s ease',
-        }}
-      >
-        <Home size={15} />
-        <span>About / Home</span>
-      </button>
+      <ProgressionBar />
+
       <button
         onClick={() => (replay.active ? stopReplay() : startReplay())}
         title="Toggle Timeline Replay"
@@ -256,11 +234,8 @@ export default function App() {
         <PinsLayer />
         <UserDot />
         {!replayActive && <SimControls />}
-        <HudPanel />
-        <TopRightBar
-          onOpenSettings={() => setSettingsOpen(true)}
-          onReturnHome={handleReturnHome}
-        />
+        <HudPanel onReturnHome={handleReturnHome} />
+        <TopRightBar onOpenSettings={() => setSettingsOpen(true)} />
         <AddCapsuleButton />
         <LocateMeButton />
       </MapView>

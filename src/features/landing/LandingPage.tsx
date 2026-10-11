@@ -64,19 +64,28 @@ export function LandingPage({ onExplore }: LandingPageProps) {
           >
             <div
               style={{
-                width: '38px',
-                height: '38px',
-                backgroundColor: '#CCFF00',
+                width: '40px',
+                height: '40px',
+                backgroundColor: '#111111',
                 border: '2.5px solid #111111',
                 boxShadow: '3px 3px 0px #111111',
-                borderRadius: '8px',
+                borderRadius: '10px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 transform: 'rotate(-3deg)',
+                overflow: 'hidden',
               }}
             >
-              <Compass size={22} color="#111111" strokeWidth={2.6} />
+              <img
+                src="/logo.png"
+                alt="SeekIt Logo"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                }}
+              />
             </div>
             <div>
               <div
@@ -1637,15 +1646,20 @@ export function LandingPage({ onExplore }: LandingPageProps) {
                   style={{
                     width: '32px',
                     height: '32px',
-                    backgroundColor: '#CCFF00',
+                    backgroundColor: '#111111',
                     border: '2px solid #111111',
-                    borderRadius: '6px',
+                    borderRadius: '8px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    overflow: 'hidden',
                   }}
                 >
-                  <Compass size={18} color="#111111" />
+                  <img
+                    src="/logo.png"
+                    alt="SeekIt"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
                 </div>
                 <span
                   style={{

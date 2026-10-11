@@ -27,12 +27,22 @@ export interface FogState {
   resetFog: () => Promise<void>;
 }
 
+const getStoredDistance = (): number => {
+  if (typeof window === 'undefined') return 0;
+  try {
+    const val = localStorage.getItem('seekit_distance_meters');
+    return val ? parseFloat(val) || 0 : 0;
+  } catch {
+    return 0;
+  }
+};
+
 export const useFog = create<FogState>((set) => ({
   position: null,
   revealed: new Map<string, number>(),
   source: 'gps',
   isTracking: false,
-  distanceMeters: 0,
+  distanceMeters: getStoredDistance(),
   replay: { active: false, progress: 1 },
 
   setPosition: (pos: LatLng) => set({ position: pos }),
@@ -52,7 +62,16 @@ export const useFog = create<FogState>((set) => ({
 
   setIsTracking: (isTracking: boolean) => set({ isTracking }),
 
-  addDistance: (m: number) => set((s) => ({ distanceMeters: s.distanceMeters + m })),
+  addDistance: (m: number) =>
+    set((s) => {
+      const nextDist = s.distanceMeters + m;
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('seekit_distance_meters', String(nextDist));
+        }
+      } catch {}
+      return { distanceMeters: nextDist };
+    }),
 
   startReplay: () => set({ replay: { active: true, progress: 0 } }),
 
@@ -68,7 +87,20 @@ export const useFog = create<FogState>((set) => ({
       for (const r of records) {
         map.set(r.h3, r.ts);
       }
-      set({ revealed: map });
+
+      let storedDist = getStoredDistance();
+      // If distance wasn't stored but cells were previously uncovered,
+      // recover estimated distance (~65m per cell) so user progress isn't 0
+      if (storedDist === 0 && map.size > 0) {
+        storedDist = map.size * 65;
+        try {
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('seekit_distance_meters', String(storedDist));
+          }
+        } catch {}
+      }
+
+      set({ revealed: map, distanceMeters: storedDist });
     } catch (err) {
       console.error('Failed to hydrate revealed cells from Dexie:', err);
     }
@@ -77,6 +109,11 @@ export const useFog = create<FogState>((set) => ({
   resetFog: async () => {
     try {
       await db.cells.clear();
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('seekit_distance_meters');
+        }
+      } catch {}
       set({
         revealed: new Map<string, number>(),
         distanceMeters: 0,

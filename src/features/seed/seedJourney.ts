@@ -3,6 +3,7 @@ import { db } from '../../db';
 import { useFog } from '../../store/fog';
 import { useCapsules } from '../../store/capsules';
 import { getMapInstance } from '../../map/mapActions';
+import { haversineDistanceKm } from '../../location/ingest';
 import { H3_RES, REVEAL_K } from '../../config';
 import type { LatLng, Capsule, RevealedCell } from '../../types';
 
@@ -175,6 +176,13 @@ export async function seedDemoJourney(
   ];
 
   await db.capsules.bulkPut(demoCapsules);
+
+  // Compute cumulative distance of the seeded path and add to fog store
+  let seedDistanceMeters = 0;
+  for (let i = 1; i < pathPoints.length; i++) {
+    seedDistanceMeters += haversineDistanceKm(pathPoints[i - 1], pathPoints[i]) * 1000;
+  }
+  useFog.getState().addDistance(Math.round(seedDistanceMeters));
 
   // Hydrate stores
   await useFog.getState().hydrateRevealed();

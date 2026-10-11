@@ -12,91 +12,13 @@ import { useFog } from './store/fog';
 import { useCapsules } from './store/capsules';
 import { setMode } from './location/mode';
 import { locateMe } from './map/mapActions';
-import { HudPanel } from './features/hud/Hud';
-import { ProgressionBar } from './features/hud/ProgressionBar';
+import { TopBar } from './features/hud/TopBar';
+import { HudDrawer } from './features/hud/Hud';
 import {
   Navigation,
   Sparkles,
-  History,
-  Settings,
 } from 'lucide-react';
 import { LandingPage } from './features/landing/LandingPage';
-
-/**
- * Top-right Action Bar with Exploration Progression Bar, Replay toggle, and Settings gear buttons.
- */
-function TopRightBar({
-  onOpenSettings,
-}: {
-  onOpenSettings: () => void;
-}) {
-  const replay = useFog((state) => state.replay);
-  const startReplay = useFog((state) => state.startReplay);
-  const stopReplay = useFog((state) => state.stopReplay);
-
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        top: '16px',
-        right: '16px',
-        zIndex: 25,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-      }}
-    >
-      <ProgressionBar />
-
-      <button
-        onClick={() => (replay.active ? stopReplay() : startReplay())}
-        title="Toggle Timeline Replay"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          padding: '8px 14px',
-          borderRadius: '20px',
-          backgroundColor: replay.active ? 'var(--teal)' : 'rgba(18, 25, 35, 0.88)',
-          color: replay.active ? 'var(--void)' : 'var(--text)',
-          border: '1px solid var(--border)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
-          fontSize: '12px',
-          fontWeight: 700,
-          cursor: 'pointer',
-          transition: 'all 0.15s ease',
-        }}
-      >
-        <History size={15} />
-        <span>Replay</span>
-      </button>
-
-      <button
-        onClick={onOpenSettings}
-        title="Settings & Presentation Tools"
-        style={{
-          width: '38px',
-          height: '38px',
-          borderRadius: '50%',
-          backgroundColor: 'rgba(18, 25, 35, 0.88)',
-          color: 'var(--text)',
-          border: '1px solid var(--border)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-        }}
-      >
-        <Settings size={18} />
-      </button>
-    </div>
-  );
-}
 
 /**
  * Floating button to open the Capsule Composer.
@@ -115,6 +37,7 @@ function AddCapsuleButton() {
         setComposerOpen(true);
       }}
       title="Add Memory at current spot"
+      aria-label="Add Memory at current spot"
       style={{
         position: 'absolute',
         bottom: '24px',
@@ -157,6 +80,7 @@ function LocateMeButton() {
     <button
       onClick={() => locateMe()}
       title="Locate Me (Center Camera)"
+      aria-label="Locate Me (Center Camera)"
       style={{
         position: 'absolute',
         bottom: '24px',
@@ -193,6 +117,7 @@ function LocateMeButton() {
 
 export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [hudOpen, setHudOpen] = useState(false);
   const replayActive = useFog((state) => state.replay.active);
   const [view, setView] = useState<'landing' | 'map'>(() => {
     return window.location.hash === '#map' || window.location.search.includes('view=map')
@@ -234,8 +159,13 @@ export default function App() {
         <PinsLayer />
         <UserDot />
         {!replayActive && <SimControls />}
-        <HudPanel onReturnHome={handleReturnHome} />
-        <TopRightBar onOpenSettings={() => setSettingsOpen(true)} />
+        <TopBar
+          onReturnHome={handleReturnHome}
+          onOpenSettings={() => setSettingsOpen(true)}
+          isHudOpen={hudOpen}
+          onToggleHud={() => setHudOpen((prev) => !prev)}
+        />
+        <HudDrawer isOpen={hudOpen} onClose={() => setHudOpen(false)} />
         <AddCapsuleButton />
         <LocateMeButton />
       </MapView>
@@ -248,4 +178,3 @@ export default function App() {
     </div>
   );
 }
-

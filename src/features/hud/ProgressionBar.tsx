@@ -89,8 +89,17 @@ export function ProgressionBar() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [metricMode, setMetricMode] = useState<MetricMode>('circumference');
   const [visualMode, setVisualMode] = useState<'tier' | 'linear'>('tier');
+  const [isCompact, setIsCompact] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 680 : false
+  );
   const popoverRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleResize = () => setIsCompact(window.innerWidth < 680);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const distanceMeters = useFog((state) => state.distanceMeters);
   const revealedSize = useFog((state) => state.revealed.size);
@@ -233,86 +242,128 @@ export function ProgressionBar() {
           )}
         </div>
 
-        {/* Text & Progress Track */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: '135px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-            <span
-              style={{
-                fontSize: '10px',
-                fontWeight: 800,
-                letterSpacing: '0.04em',
-                color: 'var(--muted)',
-                textTransform: 'uppercase',
-              }}
-            >
-              Earth Explored
-            </span>
-            <span
-              style={{
-                fontSize: '12px',
-                fontWeight: 800,
-                fontFamily: 'var(--font-mono, monospace)',
-                color: '#CCFF00',
-                letterSpacing: '-0.02em',
-                textShadow: '0 0 10px rgba(204, 255, 0, 0.35)',
-              }}
-            >
-              {formattedPercent}
-            </span>
-          </div>
-
-          {/* Progress Bar Container */}
-          <div
-            style={{
-              position: 'relative',
-              width: '100%',
-              height: '5px',
-              borderRadius: '999px',
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-              overflow: 'hidden',
-            }}
-          >
-            {/* Filled Bar */}
+        {/* Responsive Text & Progress Track */}
+        {isCompact ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: '64px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+              <span
+                style={{
+                  fontSize: '11.5px',
+                  fontWeight: 800,
+                  fontFamily: 'var(--font-mono, monospace)',
+                  color: '#CCFF00',
+                  letterSpacing: '-0.02em',
+                  textShadow: '0 0 8px rgba(204, 255, 0, 0.35)',
+                  lineHeight: 1.1,
+                }}
+              >
+                {formattedPercent}
+              </span>
+            </div>
+            {/* Compact Progress Bar */}
             <div
               style={{
-                position: 'absolute',
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: `${visualFillPercent}%`,
+                position: 'relative',
+                width: '100%',
+                height: '3.5px',
                 borderRadius: '999px',
-                background: 'linear-gradient(90deg, #2dd4bf 0%, #CCFF00 100%)',
-                boxShadow: '0 0 10px rgba(45, 212, 191, 0.7)',
-                transition: 'width 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                overflow: 'hidden',
               }}
-            />
+            >
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: `${visualFillPercent}%`,
+                  borderRadius: '999px',
+                  background: 'linear-gradient(90deg, #2dd4bf 0%, #CCFF00 100%)',
+                }}
+              />
+            </div>
           </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: '135px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+              <span
+                style={{
+                  fontSize: '10px',
+                  fontWeight: 800,
+                  letterSpacing: '0.04em',
+                  color: 'var(--muted)',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Earth Explored
+              </span>
+              <span
+                style={{
+                  fontSize: '12px',
+                  fontWeight: 800,
+                  fontFamily: 'var(--font-mono, monospace)',
+                  color: '#CCFF00',
+                  letterSpacing: '-0.02em',
+                  textShadow: '0 0 10px rgba(204, 255, 0, 0.35)',
+                }}
+              >
+                {formattedPercent}
+              </span>
+            </div>
 
-          {/* Sub-label */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontSize: '9.5px',
-              color: 'var(--muted)',
-              lineHeight: 1.1,
-            }}
-          >
-            <span>
-              {distanceMeters >= 1000
-                ? `${distanceKm.toFixed(2)} km`
-                : `${Math.round(distanceMeters)} m`}{' '}
-              walked
-            </span>
-            <span style={{ opacity: 0.8 }}>
-              {currentTier.badge} {currentTier.name.split(' ')[0]}
-            </span>
+            {/* Progress Bar Container */}
+            <div
+              style={{
+                position: 'relative',
+                width: '100%',
+                height: '5px',
+                borderRadius: '999px',
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: `${visualFillPercent}%`,
+                  borderRadius: '999px',
+                  background: 'linear-gradient(90deg, #2dd4bf 0%, #CCFF00 100%)',
+                  boxShadow: '0 0 10px rgba(45, 212, 191, 0.7)',
+                  transition: 'width 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                }}
+              />
+            </div>
+
+            {/* Sub-label */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '9.5px',
+                color: 'var(--muted)',
+                lineHeight: 1.1,
+              }}
+            >
+              <span>
+                {distanceMeters >= 1000
+                  ? `${distanceKm.toFixed(2)} km`
+                  : `${Math.round(distanceMeters)} m`}{' '}
+                walked
+              </span>
+              <span style={{ opacity: 0.8 }}>
+                {currentTier.badge} {currentTier.name.split(' ')[0]}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
         <ChevronDown
-          size={14}
+          size={13}
           style={{
             color: 'var(--muted)',
             transform: detailsOpen ? 'rotate(180deg)' : 'rotate(0deg)',
@@ -328,10 +379,11 @@ export function ProgressionBar() {
           style={{
             position: 'absolute',
             top: 'calc(100% + 10px)',
-            right: 0,
+            left: '50%',
+            transform: 'translateX(-50%)',
             zIndex: 40,
             width: '370px',
-            maxWidth: 'calc(100vw - 32px)',
+            maxWidth: 'min(370px, calc(100vw - 24px))',
             backgroundColor: 'rgba(15, 23, 42, 0.95)',
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',

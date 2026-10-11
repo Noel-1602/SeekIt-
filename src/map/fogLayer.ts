@@ -1,6 +1,7 @@
 import type { Map as MapLibreMap, GeoJSONSource } from 'maplibre-gl';
 import { cellsToMultiPolygon, isValidCell } from 'h3-js';
 import { useFog, getVisibleRevealed } from '../store/fog';
+import type { MapTheme } from './solarTheme';
 
 export const FOG_FILL_SOURCE_ID = 'fog-fill-source';
 export const FOG_EDGE_SOURCE_ID = 'fog-edge-source';
@@ -173,13 +174,42 @@ export function buildFogEdge(
   }
 }
 
-/**
- * Adds the cloudy fog sources and layers to the MapLibre map instance.
- */
-export function setupFogLayers(map: MapLibreMap): void {
-  const initialRevealed = useFog.getState().revealed;
+export const FOG_THEMES = {
+  day: {
+    fillColor: '#e2e8f0', // Soft mist slate-200 cloud base
+    fillOpacity: 0.95,
+    edgeBlurColor: '#cbd5e1',
+    edgeBlurOpacity: 0.75,
+    edgeBlurWidth: 26,
+    edgeBlurBlur: 18,
+    edgeColor: '#f8fafc',
+    edgeOpacity: 0.85,
+    edgeWidth: 12,
+    edgeBlur: 8,
+  },
+  night: {
+    fillColor: '#070a0f', // Deep dark void obsidian
+    fillOpacity: 0.94,
+    edgeBlurColor: '#0284c7', // Cyan cosmic aurora edge glow
+    edgeBlurOpacity: 0.45,
+    edgeBlurWidth: 28,
+    edgeBlurBlur: 20,
+    edgeColor: '#38bdf8', // Luminous perimeter highlight
+    edgeOpacity: 0.75,
+    edgeWidth: 10,
+    edgeBlur: 6,
+  },
+} as const;
 
-  // Inverted Fog Fill (soft mist white/slate covering unrevealed terrain)
+/**
+ * Adds or updates the cloudy fog sources and layers on the MapLibre map instance,
+ * adapting colors for day mist or night cosmic atmosphere.
+ */
+export function setupFogLayers(map: MapLibreMap, theme: MapTheme = 'day'): void {
+  const initialRevealed = useFog.getState().revealed;
+  const colors = FOG_THEMES[theme];
+
+  // Inverted Fog Fill (soft mist or deep obsidian void covering unrevealed terrain)
   if (!map.getSource(FOG_FILL_SOURCE_ID)) {
     map.addSource(FOG_FILL_SOURCE_ID, {
       type: 'geojson',
@@ -193,13 +223,16 @@ export function setupFogLayers(map: MapLibreMap): void {
       type: 'fill',
       source: FOG_FILL_SOURCE_ID,
       paint: {
-        'fill-color': '#e2e8f0', // Soft mist slate-200 cloud base
-        'fill-opacity': 0.95, // Deep cloudy envelope over unrevealed terrain
+        'fill-color': colors.fillColor,
+        'fill-opacity': colors.fillOpacity,
       },
     });
+  } else {
+    map.setPaintProperty(FOG_FILL_LAYER_ID, 'fill-color', colors.fillColor);
+    map.setPaintProperty(FOG_FILL_LAYER_ID, 'fill-opacity', colors.fillOpacity);
   }
 
-  // Fog Edge: Soft misty feathering along perimeter of revealed hole
+  // Fog Edge Source
   if (!map.getSource(FOG_EDGE_SOURCE_ID)) {
     map.addSource(FOG_EDGE_SOURCE_ID, {
       type: 'geojson',
@@ -207,7 +240,7 @@ export function setupFogLayers(map: MapLibreMap): void {
     });
   }
 
-  // Outer diffuse mist layer
+  // Outer diffuse feathering layer
   if (!map.getLayer(FOG_EDGE_BLUR_LAYER_ID)) {
     map.addLayer({
       id: FOG_EDGE_BLUR_LAYER_ID,
@@ -218,12 +251,15 @@ export function setupFogLayers(map: MapLibreMap): void {
         'line-cap': 'round',
       },
       paint: {
-        'line-color': '#e2e8f0',
-        'line-width': 26,
-        'line-blur': 18,
-        'line-opacity': 0.75,
+        'line-color': colors.edgeBlurColor,
+        'line-width': colors.edgeBlurWidth,
+        'line-blur': colors.edgeBlurBlur,
+        'line-opacity': colors.edgeBlurOpacity,
       },
     });
+  } else {
+    map.setPaintProperty(FOG_EDGE_BLUR_LAYER_ID, 'line-color', colors.edgeBlurColor);
+    map.setPaintProperty(FOG_EDGE_BLUR_LAYER_ID, 'line-opacity', colors.edgeBlurOpacity);
   }
 
   // Inner soft cloud feathering layer
@@ -237,13 +273,24 @@ export function setupFogLayers(map: MapLibreMap): void {
         'line-cap': 'round',
       },
       paint: {
-        'line-color': '#f8fafc',
-        'line-width': 12,
-        'line-blur': 8,
-        'line-opacity': 0.85,
+        'line-color': colors.edgeColor,
+        'line-width': colors.edgeWidth,
+        'line-blur': colors.edgeBlur,
+        'line-opacity': colors.edgeOpacity,
       },
     });
+  } else {
+    map.setPaintProperty(FOG_EDGE_LAYER_ID, 'line-color', colors.edgeColor);
+    map.setPaintProperty(FOG_EDGE_LAYER_ID, 'line-opacity', colors.edgeOpacity);
   }
+}
+
+/**
+ * Updates existing fog paint properties to match the active day/night theme.
+ */
+export function applyFogTheme(map: MapLibreMap, theme: MapTheme): void {
+  if (!map.isStyleLoaded()) return;
+  setupFogLayers(map, theme);
 }
 
 /**
@@ -252,7 +299,10 @@ export function setupFogLayers(map: MapLibreMap): void {
  *
  * @returns cleanup function to unsubscribe and remove layers.
  */
-export function initFogLayer(map: MapLibreMap): () => void {
+export function initFogLayer(
+  map: MapLibreMap,
+  getTheme: () => MapTheme = () => 'day'
+): () => void {
   let isDisposed = false;
   let prevRevealedSize = useFog.getState().revealed.size;
   let prevReplayActive = useFog.getState().replay.active;
@@ -273,9 +323,14 @@ export function initFogLayer(map: MapLibreMap): () => void {
 
   const onStyleOrLoadReady = () => {
     if (isDisposed) return;
-    setupFogLayers(map);
-    const visible = getVisibleRevealed(useFog.getState());
-    updateSources(visible);
+    if (map.isStyleLoaded()) {
+      // Re-create fog layers if stripped by a basemap style swap
+      if (!map.getSource(FOG_FILL_SOURCE_ID)) {
+        setupFogLayers(map, getTheme());
+        const visible = getVisibleRevealed(useFog.getState());
+        updateSources(visible);
+      }
+    }
   };
 
   if (map.isStyleLoaded()) {
@@ -283,6 +338,9 @@ export function initFogLayer(map: MapLibreMap): () => void {
   } else {
     map.once('load', onStyleOrLoadReady);
   }
+
+  // Ensure fog sources & layers are restored whenever MapLibre switches styles
+  map.on('styledata', onStyleOrLoadReady);
 
   // Subscribe to store: updates when revealed changes OR replay progress/active changes
   const unsubscribe = useFog.subscribe((state) => {
@@ -312,6 +370,7 @@ export function initFogLayer(map: MapLibreMap): () => void {
     isDisposed = true;
     unsubscribe();
     map.off('load', onStyleOrLoadReady);
+    map.off('styledata', onStyleOrLoadReady);
     try {
       if (map.getLayer(FOG_EDGE_LAYER_ID)) map.removeLayer(FOG_EDGE_LAYER_ID);
       if (map.getLayer(FOG_EDGE_BLUR_LAYER_ID)) map.removeLayer(FOG_EDGE_BLUR_LAYER_ID);

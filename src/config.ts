@@ -1,6 +1,8 @@
 import type { LatLng } from './types';
 
-export const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
+export const STYLE_URL_DAY = 'https://tiles.openfreemap.org/styles/liberty';
+export const STYLE_URL_NIGHT = 'https://tiles.openfreemap.org/styles/dark';
+export const STYLE_URL = STYLE_URL_DAY;
 export const H3_RES = 10; // hex edge ~65 m
 export const REVEAL_K = 0; // only active cell (tight reveal)
 export const MAX_ACCURACY_M = 50; // reject GPS fixes worse than this
